@@ -19,21 +19,32 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "rtc.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+RTC_HandleTypeDef hrtc;
+
+
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,12 +55,54 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+	uint8_t znak, kom[20];
+	uint16_t dl_kom;
+
+	uint16_t *hr;
+
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+int splitNumber(int num){
+	      int arr[2];
+
+	      while(num != 0){
+	          for(int i = 0; i < 2; i++){
+	              arr[i] = num % 10;
+	          }
+	          num = num / 10;
+	      }
+	      return arr[1];
+
+}
+
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
+	static RTC_TimeTypeDef sTime;
+	static char mess[30];
+	 size_t size;
+
+	HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
+
+	size = sprintf(mess, "%2.2u:%2.2u:%2.2u\n", sTime.Hours, sTime.Minutes, sTime.Seconds);
+	HAL_UART_Transmit_IT(&huart2, (uint8_t*)mess, size);
+
+	 uint8_t hours = sTime.Hours;
+	 uint16_t seconds = sTime.Seconds;
+
+
+	 int hour = splitNumber(seconds);
+	 hr = &hour;
+
+	 //size = sprintf(mess, "Split number: %d\n", *hr);
+	 //HAL_UART_Transmit_IT(&huart2, (uint8_t*)mess, size);
+
+
+
+}
 
 /* USER CODE END PFP */
 
@@ -87,7 +140,32 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
+  static GPIO_TypeDef* leds0[2] = {{BIA_GPIO_Port}, {BRO_GPIO_Port}};
+  static uint16_t leds0_pins[2] = {{BIA_Pin}, {BRO_Pin}};
+
+  RTC_TimeTypeDef sTime;
+
+  char mess[50];
+  uint8_t size;
+
+  HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
+
+  sTime.Hours = 20;
+  sTime.Minutes = 25;
+  sTime.Seconds = 15;
+
+  HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+
+
+
+    //HAL_UART_Transmit_IT(&huart2, (uint8_t*)mess, size);
+
+    HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2047, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
+
+
 
   /* USER CODE END 2 */
 
@@ -95,22 +173,35 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(!HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin)){
-		  HAL_Delay(500);
-		  //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-		  HAL_GPIO_WritePin(LEDG_GPIO_Port, LEDG_Pin, GPIO_PIN_SET);
-		  HAL_Delay(500);
-		  HAL_GPIO_WritePin(LEDB_GPIO_Port, LEDB_Pin, GPIO_PIN_SET);
+	  //HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
-		  HAL_Delay(5);
+
+
+
+
+
+
+
+
+
+
+
+
+	  if(*hr == 2 || 6){
+		  HAL_GPIO_WritePin(leds0
+				  [0], BIA_Pin, GPIO_PIN_SET);
+		  //
+
+
 	  }
 
-	  if(HAL_GPIO_ReadPin(LEDB_GPIO_Port, LEDB_Pin) == 1 || HAL_GPIO_ReadPin(LEDG_GPIO_Port, LEDG_Pin) == 1){
-		  HAL_Delay(300);
-		  HAL_GPIO_WritePin(LEDG_GPIO_Port, LEDG_Pin, GPIO_PIN_RESET);
-		  HAL_Delay(300);
-		  HAL_GPIO_WritePin(LEDB_GPIO_Port, LEDB_Pin, GPIO_PIN_RESET);
-	  }
+
+
+
+
+
+
+
 
 
 
@@ -134,9 +225,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
@@ -158,8 +250,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_RTC;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -167,6 +260,33 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+
+	if(huart->Instance == USART2)
+	{
+
+
+		if(znak == 'e'){
+
+				  // HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+			//sprintf(kom, "Date: %d:%d:%d", sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+			HAL_RTCEx_WakeUpTimerEventCallback(&hrtc);
+
+		}
+		//HAL_UART_Transmit_IT(&huart2, kom, dl_kom);
+		HAL_UART_Receive_IT(&huart2, &znak, 1);
+	}
+}
+
+
+
+
+
+
+
+
 
 /* USER CODE END 4 */
 

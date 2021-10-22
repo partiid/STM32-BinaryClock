@@ -58,18 +58,24 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define B1_Pin GPIO_PIN_13
-#define B1_GPIO_Port GPIOC
-#define LEDG_Pin GPIO_PIN_0
-#define LEDG_GPIO_Port GPIOC
-#define LEDB_Pin GPIO_PIN_1
-#define LEDB_GPIO_Port GPIOC
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
+#define ZOL_Pin GPIO_PIN_11
+#define ZOL_GPIO_Port GPIOB
+#define NIE_Pin GPIO_PIN_12
+#define NIE_GPIO_Port GPIOB
+#define BRO_Pin GPIO_PIN_6
+#define BRO_GPIO_Port GPIOC
+#define BIA_Pin GPIO_PIN_8
+#define BIA_GPIO_Port GPIOC
+#define ZIE_Pin GPIO_PIN_11
+#define ZIE_GPIO_Port GPIOA
+#define FIO_Pin GPIO_PIN_12
+#define FIO_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14

@@ -72,7 +72,7 @@ void MX_RTC_Init(void)
   sDate.WeekDay = RTC_WEEKDAY_THURSDAY;
   sDate.Month = RTC_MONTH_OCTOBER;
   sDate.Date = 21;
-  sDate.Year = 2021;
+  sDate.Year = 0;
 
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
   {

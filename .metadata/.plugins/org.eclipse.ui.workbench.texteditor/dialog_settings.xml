@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
-		<item key="selection" value="&#x0D;&#x0A;&#x09;  int diodes_to_light = splitNumber(22);&#x0D;&#x0A;&#x0D;&#x0A;&#x0D;&#x0A;&#x09;  if(diodes_to_light == 1){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_SET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x0D;&#x0A;&#x09;  }&#x0D;&#x0A;&#x09;  if(diodes_to_light == 2){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_SET);&#x0D;&#x0A;&#x09;  }&#x0D;&#x0A;&#x09;  if(diodes_to_light == 0){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;  }"/>
+		<item key="selection" value="x4hz"/>
 		<item key="wrap" value="true"/>
 		<item key="casesensitive" value="false"/>
 		<item key="wholeword" value="false"/>
 		<item key="incremental" value="false"/>
 		<item key="isRegEx" value="false"/>
 		<list key="findhistory">
+			<item value="x2hz"/>
 			<item value="&#x0D;&#x0A;&#x09;  int diodes_to_light = splitNumber(22);&#x0D;&#x0A;&#x0D;&#x0A;&#x0D;&#x0A;&#x09;  if(diodes_to_light == 1){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_SET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x0D;&#x0A;&#x09;  }&#x0D;&#x0A;&#x09;  if(diodes_to_light == 2){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_SET);&#x0D;&#x0A;&#x09;  }&#x0D;&#x0A;&#x09;  if(diodes_to_light == 0){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;  }"/>
 			<item value="HAL_UART_IRQHandler"/>
 			<item value=" const char* getDiode(int num){"/>
 			<item value="WRITEPIN"/>
 		</list>
 		<list key="replacehistory">
+			<item value="x4hz"/>
 		</list>
 	</section>
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">

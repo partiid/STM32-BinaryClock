@@ -58,7 +58,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void delay_1hz(){
 	x1hzTime++;
-	if( x1hzTime >= 833.33){
+	if( x1hzTime >= 1000){
 		x1hz = 1;
 		x1hzTime = 0;
 	}
@@ -125,7 +125,11 @@ int main(void)
 
 		  x1hz = 0;
 		  x4hz = 0;
+
+		  HAL_Delay(200);
 	  }
+
+
 
 	  if(buttonMode == 1){
 		  if(x1hz == 1){
@@ -134,7 +138,8 @@ int main(void)
 		  }
 
 
-	  } else {
+	  }
+	  else {
 		  if(x4hz == 1){
 			  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 			  x4hz = 0;

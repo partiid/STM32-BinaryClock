@@ -39,10 +39,12 @@ RTC_HandleTypeDef hrtc;
 
 
 
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define RX_BUFF_SIZE 12
 
 
 /* USER CODE END PD */
@@ -58,6 +60,24 @@ RTC_HandleTypeDef hrtc;
 	uint8_t znak, kom[20];
 	uint16_t dl_kom;
 
+	uint8_t invalid_command = 0;
+
+	uint8_t Rx_byte;
+	uint8_t Rx_data[RX_BUFF_SIZE];
+	uint8_t Rx_idx = 0;
+	char command[100];
+
+
+	uint8_t Tx_byte;
+	uint8_t Tx_data[128];
+	uint16_t Tx_data_size;
+
+
+
+
+
+
+	//project
 	uint16_t *hr;
 
 
@@ -66,6 +86,9 @@ RTC_HandleTypeDef hrtc;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+
+
 
 int splitNumber(int num){
 	      int arr[2];
@@ -88,7 +111,7 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
 	HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
 
 	size = sprintf(mess, "%2.2u:%2.2u:%2.2u\n", sTime.Hours, sTime.Minutes, sTime.Seconds);
-	HAL_UART_Transmit_IT(&huart2, (uint8_t*)mess, size);
+	//HAL_UART_Transmit_IT(&huart2, (uint8_t*)mess, size);
 
 	 uint8_t hours = sTime.Hours;
 	 uint16_t seconds = sTime.Seconds;
@@ -108,6 +131,94 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+uint16_t time_passed = 0;
+uint8_t delay_done = 0;
+
+void checkDelay(uint16_t delay){
+	time_passed++;
+	if(time_passed > delay){
+		time_passed = 0;
+		delay_done = 1;
+
+	}
+}
+
+void resetBuffers(){
+
+	memset(command, 0, sizeof command);
+	memset(Rx_data, 0, sizeof Rx_data);
+	memset(Tx_data, 0, sizeof Tx_data);
+	Rx_idx = 0;
+	Rx_byte = 0;
+
+
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart ){
+
+	if(huart->Instance == USART2)
+	{
+
+
+	      // HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+			//sprintf(kom, "Date: %d:%d:%d", sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+			//HAL_RTCEx_WakeUpTimerEventCallback(&hrtc);
+
+			//HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+
+
+
+		Rx_data[Rx_idx++] = Rx_byte;
+
+
+		//HAL_UART_Transmit_IT(&huart2, kom, dl_kom);
+		HAL_UART_Receive_IT(&huart2, &Rx_byte, 1);
+
+				 strcpy(command, Rx_data);
+				 invalid_command = 1;
+
+
+
+				 if(strcmp(command , "LED[ON]") == 0){
+					 	 invalid_command = 0;
+						HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+
+						resetBuffers();
+
+				 }else if(strcmp(command, "LED[OFF]") == 0){
+					 	invalid_command = 0;
+						HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+						resetBuffers();
+				}
+
+
+				 if(invalid_command == 1){
+				 	sprintf(Tx_data, "Niepoprawna komenda\n");
+				 	HAL_UART_Transmit_IT(&huart2, Tx_data, sizeof Tx_data);
+				 	memset(Tx_data, 0, sizeof Tx_data);
+
+				 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	}
+}
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+
+}
 
 /* USER CODE END 0 */
 
@@ -142,6 +253,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_UART_Receive_IT(&huart2, &Rx_byte, 1);
+
   static GPIO_TypeDef* leds0[2] = {{BIA_GPIO_Port}, {BRO_GPIO_Port}};
   static uint16_t leds0_pins[2] = {{BIA_Pin}, {BRO_Pin}};
 
@@ -176,30 +290,12 @@ int main(void)
 	  //HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
 
-
-
-
-
-
-
-
-
-
-
-
 	  if(*hr == 2 || 6){
-		  HAL_GPIO_WritePin(leds0[0], BIA_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_TogglePin(leds0[0], BIA_Pin);
 		  //
 
 
 	  }
-
-
-
-
-
-
-
 
 
 
@@ -260,24 +356,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
-	if(huart->Instance == USART2)
-	{
-
-
-		if(znak == 'e'){
-
-				  // HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-			//sprintf(kom, "Date: %d:%d:%d", sTime.Hours, sTime.Minutes, sTime.Seconds);
-
-			HAL_RTCEx_WakeUpTimerEventCallback(&hrtc);
-
-		}
-		//HAL_UART_Transmit_IT(&huart2, kom, dl_kom);
-		HAL_UART_Receive_IT(&huart2, &znak, 1);
-	}
-}
 
 
 

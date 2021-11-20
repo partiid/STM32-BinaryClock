@@ -1,0 +1,61 @@
+21:24:55 **** Incremental Build of configuration Debug for project lab2 ****
+make -j4 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F303xE -c -I../Core/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc -I../Drivers/STM32F3xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F3xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c:48:15: error: 'LENTX' undeclared here (not in a function)
+   48 | uint8_t bf_tx[LENTX];
+      |               ^~~~~
+../Core/Src/main.c: In function 'USART_kbhit':
+../Core/Src/main.c:106:7: error: 'USART_RX_Empty' undeclared (first use in this function); did you mean 'USART_RX_Pin'?
+  106 |    if(USART_RX_Empty == USART_RX_Busy){
+      |       ^~~~~~~~~~~~~~
+      |       USART_RX_Pin
+../Core/Src/main.c:106:7: note: each undeclared identifier is reported only once for each function it appears in
+../Core/Src/main.c:106:25: error: 'USART_RX_Busy' undeclared (first use in this function); did you mean 'USART_RX_Pin'?
+  106 |    if(USART_RX_Empty == USART_RX_Busy){
+      |                         ^~~~~~~~~~~~~
+      |                         USART_RX_Pin
+../Core/Src/main.c: In function 'USART_getchar':
+../Core/Src/main.c:117:7: error: 'USART_RX_Empty' undeclared (first use in this function); did you mean 'USART_RX_Pin'?
+  117 |    if(USART_RX_Empty != USART_RX_Busy){
+      |       ^~~~~~~~~~~~~~
+      |       USART_RX_Pin
+../Core/Src/main.c:117:25: error: 'USART_RX_Busy' undeclared (first use in this function); did you mean 'USART_RX_Pin'?
+  117 |    if(USART_RX_Empty != USART_RX_Busy){
+      |                         ^~~~~~~~~~~~~
+      |                         USART_RX_Pin
+../Core/Src/main.c:118:10: error: 'USART_RxBuf' undeclared (first use in this function)
+  118 |     temp=USART_RxBuf[USART_RX_Busy];
+      |          ^~~~~~~~~~~
+../Core/Src/main.c:121:25: error: 'USART_RXBUF_LEN' undeclared (first use in this function); did you mean 'USART_RTOR_BLEN'?
+  121 |     if(USART_RX_Busy >= USART_RXBUF_LEN){
+      |                         ^~~~~~~~~~~~~~~
+      |                         USART_RTOR_BLEN
+../Core/Src/main.c:122:6: error: 'USART_TX_Busy' undeclared (first use in this function); did you mean 'USART_TX_Pin'?
+  122 |      USART_TX_Busy = 0;
+      |      ^~~~~~~~~~~~~
+      |      USART_TX_Pin
+../Core/Src/main.c:124:12: error: 'tmp' undeclared (first use in this function); did you mean 'temp'?
+  124 |     return tmp;
+      |            ^~~
+      |            temp
+../Core/Src/main.c:116:12: warning: variable 'temp' set but not used [-Wunused-but-set-variable]
+  116 |    uint8_t temp;
+      |            ^~~~
+At top level:
+../Core/Src/main.c:115:12: warning: 'USART_getchar' defined but not used [-Wunused-function]
+  115 |   uint16_t USART_getchar(){
+      |            ^~~~~~~~~~~~~
+../Core/Src/main.c:105:11: warning: 'USART_kbhit' defined but not used [-Wunused-function]
+  105 |   uint8_t USART_kbhit(){
+      |           ^~~~~~~~~~~
+../Core/Src/main.c:100:8: warning: 'HAL_UART_RxCpltCallback' defined but not used [-Wunused-function]
+  100 |   void HAL_UART_RxCpltCallback(void)
+      |        ^~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:96:8: warning: 'HAL_UART_TxCpltCallback' defined but not used [-Wunused-function]
+   96 |   void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+      |        ^~~~~~~~~~~~~~~~~~~~~~~
+make: *** [Core/Src/subdir.mk:43: Core/Src/main.o] Error 1
+"make -j4 all" terminated with exit code 2. Build might be incomplete.
+
+21:24:56 Build Failed. 10 errors, 5 warnings. (took 538ms)
+

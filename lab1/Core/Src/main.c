@@ -73,6 +73,8 @@ void delay_4hz(){
 	}
 
 }
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -129,14 +131,14 @@ int main(void)
 
 	  if(buttonMode == 1){
 		  if(x1hz == 1){
-			  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+			  HAL_GPIO_TogglePin(BIA_GPIO_Port, BIA_Pin);
 			  x1hz = 0;
 		  }
 
 
 	  } else {
 		  if(x4hz == 1){
-			  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+			  HAL_GPIO_TogglePin(BIA_GPIO_Port, BIA_Pin);
 			  x4hz = 0;
 		  }
 	  }

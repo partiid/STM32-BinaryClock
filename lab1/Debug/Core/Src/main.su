@@ -1,6 +1,13 @@
 main.c:59:6:delay_1hz	4	static
 main.c:67:6:delay_4hz	4	static
+<<<<<<< HEAD
 main.c:90:5:main	8	static
 main.c:159:6:SystemClock_Config	160	static
 main.c:208:6:Error_Handler	4	static,ignoring_inline_asm
 main.c:227:6:assert_failed	16	static
+=======
+main.c:88:5:main	8	static
+main.c:162:6:SystemClock_Config	160	static
+main.c:211:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:230:6:assert_failed	16	static
+>>>>>>> d1ed5e972e0e9c1eaba687dcf75fd3cf3839ea87

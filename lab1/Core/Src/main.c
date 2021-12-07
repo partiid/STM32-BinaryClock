@@ -19,12 +19,16 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdarg.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +38,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define RX_BUFF_SIZE 32
+#define TX_BUFF_SIZE 32
+#define CMD_SIZE 32
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,6 +57,47 @@
 	static uint8_t x1hz = 0;
 	static uint8_t x4hz = 0;
 	uint16_t buttonMode = 0;
+
+	/* ===== BUFOR RX ===== */
+
+	uint8_t Rx_buff[RX_BUFF_SIZE];
+	uint8_t volatile Rx_empty = 0;
+	uint8_t volatile Rx_busy = 0;
+
+	/* ===== BUFOR TX ===== */
+
+	uint8_t Tx_buff[TX_BUFF_SIZE];
+	uint8_t volatile Tx_empty = 0;
+	uint8_t volatile Tx_busy = 0;
+
+	/* ==== COMMAND === */
+	char command[CMD_SIZE];
+	uint8_t volatile Cmd_busy = 0;
+
+
+
+	/* ==== sterowanie diodą ==== */
+	uint8_t volatile blink_mode = 0;
+	uint32_t volatile pTimeOn;
+	uint32_t volatile pTimeOff;
+	uint32_t volatile pCount;
+
+	uint16_t volatile time_on = 500;
+	uint16_t volatile time_off = 0;
+	uint16_t volatile blink_count = 0;
+	extern uint16_t led_delay;
+
+	/* ===== timery dioda ==== */
+
+	uint32_t volatile pBlinkTime;
+	uint16_t volatile blink_time;
+	uint32_t volatile timer_value = 0;
+
+
+	/* === delay timer logic ==== */
+	uint8_t volatile delayFlag = 0;
+	uint16_t volatile delayTime = 0;
+	uint32_t volatile delayTimer_value = 0;
 
 
 /* USER CODE END PV */
@@ -74,12 +123,240 @@ void delay_4hz(){
 
 }
 
+/* TIMER DELAYS */
+void delayUs(uint16_t us){
+	__HAL_TIM_SET_COUNTER(&htim7, 0);
+	while(__HAL_TIM_GET_COUNTER(&htim6) < us);
+}
+
+void delayMs(uint16_t ms){
+	for(uint16_t i = 0; i < ms; i++){
+		delayUs(1000); //1ms delay
+	}
+}
+
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
+/* ===== COMMAND HANDLERS ===== */
+
+void assignBlinkParamsCommand(){
+	time_on = pTimeOn;
+	time_off = pTimeOff + pTimeOn;
+	blink_count = pCount;
+	blink_mode = 1;
+
+
+
+}
+void handleBlinkCommand(){
+	if(led_delay <= time_on){
+		HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_SET);
+
+	} else if(led_delay <= time_off){
+		HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);
+
+	} else {
+		led_delay = 0;
+		blink_count -= 1;
+		if(blink_count <= 0){
+			blink_mode = 0;
+		}
+	}
+
+}
+
+/* ===== SEND USART ==== */
+
+void Send(char* message, ...){
+	char temp[64];
+
+	volatile int idx = Tx_empty;
+
+
+	va_list arglist;
+	va_start(arglist, message);
+	vsprintf(temp, message, arglist);
+	va_end(arglist);
+
+	for(int i = 0; i < strlen(temp); i++){
+		Tx_buff[idx] = temp[i];
+		idx++;
+		if(idx >= TX_BUFF_SIZE){
+			idx = 0;
+		}
+
+	}
+	__disable_irq();
+
+	if(Tx_empty == Tx_busy){
+		Tx_empty = idx;
+		uint8_t tmp = Tx_buff[Tx_busy];
+		Tx_busy++;
+		if(Tx_busy >= TX_BUFF_SIZE){
+			Tx_busy = 0;
+		}
+
+		HAL_UART_Transmit_IT(&huart2, &tmp, 1);
+
+	} else {
+		Tx_empty = idx;
+	}
+	__enable_irq();
+}
+
+
+/* send usart callback */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	if(Tx_busy != Tx_empty){
+
+		uint8_t temp = Tx_buff[Tx_busy];
+		Tx_busy++;
+
+		if(Tx_busy >= TX_BUFF_SIZE){
+			Tx_busy = 0;
+		}
+		HAL_UART_Transmit_IT(&huart2, &temp, 1);
+	}
+}
+
+
+
+/* ===== receive usart callback ===== */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	if(huart->Instance == USART2){
+		Rx_empty++;
+		if(Rx_empty >= RX_BUFF_SIZE){
+			Rx_empty = 0;
+		}
+		HAL_UART_Receive_IT(&huart2, &Rx_buff[Rx_empty], 1);
+
+
+	}
+}
+
+
+/* ===== check if data stopped to be received ===== */
+
+uint8_t isRxBuffEmpty(){
+	if(Rx_empty != Rx_busy){
+		return 1;
+	}else {
+		return 0;
+	}
+}
+
+
+
+/* ===== command parser ===== */
+void parseCmd(){
+
+		if(strcmp("LED[ON]", command) == 0){
+				HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_SET);
+
+			}
+			else if(strcmp("LED[OFF]", command) == 0){
+				HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);
+			} else if(sscanf(command, "LED[BLINK,%d,%d,%d]", &pTimeOn, &pTimeOff, &pCount) == 3){
+				assignBlinkParamsCommand();
+
+			} else if(sscanf(command, "LED[BLINK,%d]", &pBlinkTime) == 1){
+				blink_mode = 2;
+				blink_time = pBlinkTime;
+
+			} else if(sscanf(command, "LED[Delay,%d]", &delayTime) == 1){
+				delayFlag = 1;
+			}
+			else {
+				Send("Nieprawidłowa komenda \n\r");
+
+			}
+
+
+
+
+
+
+
+	Cmd_busy = 0;
+
+
+
+}
+
+
+
+void downloadCmd(){
+
+	char temp = Rx_buff[Rx_busy];
+
+	if(temp == 0x3B /* ; */){
+		command[Cmd_busy] = 0x00;
+		parseCmd();
+
+	} else {
+		command[Cmd_busy] = temp;
+	}
+
+	/* check cmd length */
+	if(temp != 0x3B){
+		Cmd_busy++;
+		if(Cmd_busy >= CMD_SIZE){
+			Rx_busy = Rx_empty;
+			Cmd_busy = 0;
+
+		}
+
+	}
+
+	Rx_busy++;
+	if(Rx_busy >= RX_BUFF_SIZE){
+		Rx_busy = 0;
+	}
+
+
+
+}
+
+
+
+
+
+
+void buttonHandler() {
+
+	 if(!HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin)){
+
+			  buttonMode = !buttonMode;
+
+			  x1hz = 0;
+			  x4hz = 0;
+
+			  HAL_Delay(400);
+
+
+		  }
+
+		  if(buttonMode == 1){
+			  if(x1hz == 1){
+				  HAL_GPIO_TogglePin(BIA_GPIO_Port, BIA_Pin);
+				  x1hz = 0;
+			  }
+
+
+		  }
+		  else {
+			  if(x4hz == 1){
+				  HAL_GPIO_TogglePin(BIA_GPIO_Port, BIA_Pin);
+				  x4hz = 0;
+			  }
+		  }
+
+}
 
 /* USER CODE END 0 */
 
@@ -112,7 +389,20 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_TIM6_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
+
+
+  HAL_UART_Receive_IT(&huart2, &Rx_buff[Rx_empty], 1);
+
+  Send("Hello, im STM32!\r\n");
+
+  /* === TIMER INIT ===== */
+  HAL_TIM_Base_Start(&htim6);
+
+  timer_value = __HAL_TIM_GET_COUNTER(&htim6);
+
 
   /* USER CODE END 2 */
 
@@ -121,36 +411,37 @@ int main(void)
   while (1)
   {
 
-	  if(!HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin)){
-
-		  buttonMode = !buttonMode;
-
-		  x1hz = 0;
-		  x4hz = 0;
-
-		  HAL_Delay(200);
-	  }
+	 buttonHandler();
 
 
+	 while(isRxBuffEmpty()){
+		 downloadCmd();
+	 }
 
-	  if(buttonMode == 1){
-		  if(x1hz == 1){
-			  HAL_GPIO_TogglePin(BIA_GPIO_Port, BIA_Pin);
-			  x1hz = 0;
-		  }
+	 /* ==== LED BLINKING WITH TIMER AND NORMAL === */
+	 if(blink_mode == 1){
+		 handleBlinkCommand();
+	 } else if(blink_mode == 2){
+		 if(__HAL_TIM_GET_COUNTER(&htim6) - timer_value >= blink_time){
+			 HAL_GPIO_TogglePin(BRO_GPIO_Port, BRO_Pin);
+			 timer_value = __HAL_TIM_GET_COUNTER(&htim6);
+		 }
+	 }
+
+	 /* ==== delay settings ==== */
+
+	 if(delayFlag == 1){
 
 
-	  }
-	  else {
-		  if(x4hz == 1){
-			  HAL_GPIO_TogglePin(BIA_GPIO_Port, BIA_Pin);
-			  x4hz = 0;
-		  }
-	  }
+		 delayMs(delayTime);
+
+
+	 }
+
+
 
 
     /* USER CODE END WHILE */
-
 
     /* USER CODE BEGIN 3 */
   }

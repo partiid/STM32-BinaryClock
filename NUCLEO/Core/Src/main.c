@@ -123,7 +123,7 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
 	//HAL_UART_Transmit_IT(&huart2, (uint8_t*)mess, size);
 
 	 uint8_t hours = sTime.Hours;
-	 uint16_t seconds = sTime.Seconds;
+	 uint8_t seconds = sTime.Seconds;
 
 
 	 int hour = splitNumber(seconds);

@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "rtc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -29,6 +30,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
+
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,9 +41,19 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define RX_BUFF_SIZE 32
-#define TX_BUFF_SIZE 32
-#define CMD_SIZE 32
+#define RX_BUFF_SIZE 512
+#define TX_BUFF_SIZE 512
+#define FRAME_SIZE 256
+
+
+/* ===== frame ===== */
+#define start_sign 0x24 /* $ */
+#define end_sign  0x23 /* # */
+#define command_size 128
+#define data_size 125
+
+typedef struct Time Struct;
+
 
 /* USER CODE END PD */
 
@@ -52,35 +65,64 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-	static uint32_t x1hzTime = 0;
-	static uint32_t x4hzTime = 0;
+
+	static uint16_t x1hzTime = 0;
+	static uint16_t x4hzTime = 0;
 	static uint8_t x1hz = 0;
 	static uint8_t x4hz = 0;
 	uint16_t buttonMode = 0;
 
+	/* ============================ USART ====================== */
+
 	/* ===== BUFOR RX ===== */
 
 	uint8_t Rx_buff[RX_BUFF_SIZE];
-	uint8_t volatile Rx_empty = 0;
-	uint8_t volatile Rx_busy = 0;
+	uint16_t volatile Rx_empty = 0; //tail //read
+	uint16_t volatile Rx_busy = 0; //head //write
 
 	/* ===== BUFOR TX ===== */
 
 	uint8_t Tx_buff[TX_BUFF_SIZE];
-	uint8_t volatile Tx_empty = 0;
-	uint8_t volatile Tx_busy = 0;
+	uint16_t volatile Tx_empty = 0;
+	uint16_t volatile Tx_busy = 0;
 
-	/* ==== COMMAND === */
-	char command[CMD_SIZE];
-	uint8_t volatile Cmd_busy = 0;
+	/* ============================  END USART  ====================== */
+
+
+	/* ==== FRAME === */
+
+	char frame[FRAME_SIZE];
+	uint16_t volatile Frame_busy = 0;
+	uint16_t volatile frameLength = 0;
+	uint8_t frame_found = 0;
+
+	/* ===== CORE COMMANDS SYSTEM ==== */
+
+	char command[128]; //command
+	uint8_t volatile command_busy = 0;
+
+	char data[125]; //data from command
+	uint8_t volatile data_busy = 0;
+
+	/* ================ CLOCK LOGIC ================  */
+	uint8_t hour_displayed = 0;
+
+	RTC_HandleTypeDef hrtc;
+
+
+	uint8_t volatile clock_mode = 1; //Sets the clock mode  1 -  CLOCK MODE ////// 2  - HOUR DISPLAY MODE
+	uint8_t volatile hour_to_show = 0; //hour to show on diodes
+	uint8_t volatile minute_to_show = 0;
+	uint8_t volatile second_to_show = 0;
+
 
 
 
 	/* ==== sterowanie diodą ==== */
 	uint8_t volatile blink_mode = 0;
-	uint32_t volatile pTimeOn;
-	uint32_t volatile pTimeOff;
-	uint32_t volatile pCount;
+	uint16_t volatile pTimeOn;
+	uint16_t volatile pTimeOff;
+	uint16_t volatile pCount;
 
 	uint16_t volatile time_on = 500;
 	uint16_t volatile time_off = 0;
@@ -142,7 +184,7 @@ void delayMs(uint16_t ms){
 /* USER CODE BEGIN 0 */
 
 
-/* ===== COMMAND HANDLERS ===== */
+/* ===== blink HANDLERS ===== */
 
 void assignBlinkParamsCommand(){
 	time_on = pTimeOn;
@@ -169,11 +211,23 @@ void handleBlinkCommand(){
 	}
 
 }
+/* ===== init usart ==== */
+void UART_init(){
+	Rx_empty = 0;
+	Rx_busy = 0;
+	Tx_empty = 0;
+	Tx_busy = 0;
+	memset(Rx_buff, 0, RX_BUFF_SIZE);
+	memset(Tx_buff, 0, TX_BUFF_SIZE);
+}
+
 
 /* ===== SEND USART ==== */
 
+
+
 void Send(char* message, ...){
-	char temp[64];
+	char temp[128];
 
 	volatile int idx = Tx_empty;
 
@@ -207,6 +261,8 @@ void Send(char* message, ...){
 		Tx_empty = idx;
 	}
 	__enable_irq();
+
+
 }
 
 
@@ -239,50 +295,203 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	}
 }
 
+/* ===== check if data stopped being received ===== */
 
-/* ===== check if data stopped to be received ===== */
-
-uint8_t isRxBuffEmpty(){
-	if(Rx_empty != Rx_busy){
-		return 1;
-	}else {
+uint8_t uart_ready(){
+	if(Rx_empty == Rx_busy){
 		return 0;
+	} else {
+		return 1;
 	}
+}
+
+/* ====== END USART ==== */
+
+/* ======== RTC =========== */
+
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
+	static RTC_TimeTypeDef sTime;
+
+	HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
+
+	Send("%2.2u:%2.2u:%2.2u\n\r", sTime.Hours, sTime.Minutes, sTime.Seconds);
+	//HAL_GPIO_TogglePin(SEC_GPIO_Port, SEC_Pin);
+
+	 uint8_t hours = sTime.Hours;
+	 uint8_t minutes = sTime.Minutes;
+	 uint8_t seconds = sTime.Seconds;
+
+
+	 //int hour = splitNumber(seconds);
+	 if(clock_mode == 1){
+		 displayHour(hours, minutes, seconds);
+	 }
+
+
+	 //hr = &hour;
+
+
 }
 
 
 
-/* ===== command parser ===== */
-void parseCmd(){
 
-		if(strcmp("LED[ON]", command) == 0){
+
+
+
+/* ===== PARSERS ===== */
+
+
+void parseCommand(){
+	uint8_t picked_command = 0;
+
+	if(strcmp("setMode", command) == 0){
+		int mode = parseIntData();
+		handleSetClockMode(mode);
+
+
+	} /* else if (strcmp("setTime", command) == 0){
+		parseTime();
+		resetPins();
+
+
+		setTime(hour_to_show, minute_to_show, second_to_show);
+
+
+	} */else if(strcmp("setAlarm", command) == 0){
+
+
+
+	} else if(strcmp("getAlarms", command) == 0){
+
+
+
+	} else if (strcmp("getAlarmsCount", command) == 0){
+
+
+
+	} else if (strcmp("resetAlarms", command) == 0){
+
+
+
+	} else if (strcmp("showHour", command) == 0){
+		parseTime();
+
+		handleShowHour(hour_to_show, minute_to_show, second_to_show);
+
+	}
+	else {
+		Send("Fail: {Command not found!}\n\r");
+	}
+
+	//handle picked command
+
+	clearCommand();
+	clearData();
+	Frame_busy = 0;
+
+	/*	if(strcmp("$LED[ON]#", frame) == 0){
 				HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_SET);
-
 			}
-			else if(strcmp("LED[OFF]", command) == 0){
+			else if(strcmp("$LED[OFF]#", frame) == 0){
 				HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);
-			} else if(sscanf(command, "LED[BLINK,%d,%d,%d]", &pTimeOn, &pTimeOff, &pCount) == 3){
+			} else if(sscanf(frame, "$LED[BLINK,%d,%d,%d]#", &pTimeOn, &pTimeOff, &pCount) == 3){
 				assignBlinkParamsCommand();
 
-			} else if(sscanf(command, "LED[BLINK,%d]", &pBlinkTime) == 1){
+			} else if(sscanf(frame, "$LED[BLINK,%d]#", &pBlinkTime) == 1){
 				blink_mode = 2;
 				blink_time = pBlinkTime;
 
-			} else if(sscanf(command, "LED[Delay,%d]", &delayTime) == 1){
+			} else if(sscanf(frame, "$LED[Delay,%d]#", &delayTime) == 1){
 				delayFlag = 1;
 			}
 			else {
 				Send("Nieprawidłowa komenda \n\r");
 
+			} */
+
+
+}
+//data parser
+void parseData(){
+
+
+}
+
+void parseTime(){
+	hour_to_show = 0;
+	minute_to_show = 0;
+	second_to_show = 0;
+
+	 if(sscanf(data, "%d:%d:%d", &hour_to_show, &minute_to_show, &second_to_show) == 3){
+		 Send("Success {Time parsed correctly} \r\n");
+
+	 } else {
+		 Send("Fail: {Data not acceptable}\r\n");
+	 }
+}
+
+
+
+int parseIntData(){
+	int single_param = 0;
+
+
+	if(sscanf(data, "%d", &single_param) == 1){
+		return single_param;
+	}
+	else {
+			Send("Fail: {Data not acceptable}\r\n");
+	}
+
+
+}
+
+
+/* ==== clear after command is executed to receive next command " ==== */
+
+void clearCommand(){
+	command_busy = 0;
+
+	memset(command, 0, command_size);
+
+}
+
+void clearData(){
+	data_busy = 0;
+	memset(data, 0, data_size);
+}
+
+
+/* ===== HANDLERS FOR SPECIFIC COMMANDS ====== */
+
+
+void handleSetClockMode(int mode){
+
+		if(mode == 1 || mode == 2){
+
+				clock_mode = mode;
+				Send("Success: {Running in showHourMode}\r\n");
+
+			}else {
+				Send("Data Not Acceptable\r\n");
 			}
 
 
 
 
 
+}
 
+void handleShowHour(uint8_t  hour, uint8_t  minute, uint8_t second){
 
-	Cmd_busy = 0;
+		if((hour > 0 && hour < 23) && (minute >= 0 && minute <= 59) && (second >= 0 && second <= 59)){
+
+			 hour_displayed = 0;
+			} else {
+				Send("Fail: {Data Not Acceptable} \r\n");
+			}
+
 
 
 
@@ -290,24 +499,165 @@ void parseCmd(){
 
 
 
-void downloadCmd(){
+/* ====FRAME LOGIC ====*/
+
+//decode frame and split dat and command
+void decodeFrame() {
+
+		uint8_t data_idx = 0;
+		uint8_t command_idx = 0;
+		uint8_t command_end_idx = 0;
+		uint8_t required_pass = 0; //check if all the required signs are in the frame
+
+
+	//check if begining exists
+	if(frame[0] == start_sign){
+		required_pass++;
+		frame[0] = 0x00;
+	}
+
+	//check if end exists
+	if(frame[frameLength - 1] == end_sign){
+		required_pass++;
+		frame[frameLength - 1] = 0x00;
+	}
+
+	for(int i = 0; i < frameLength; i++){
+		if(frame[i] == '='){
+			required_pass++;
+			data_idx = i + 1;
+			command_end_idx = i - 1;
+
+
+		}
+	}
+
+
+   //if all required signs are in place, check if command exists
+	//===== COMMAND ===== //
+
+	if(required_pass == 3 && (command_end_idx != command_idx)){
+
+
+		//rewrite command to the command table
+		for(int i = 1; i <= command_end_idx; i++){
+			//prevent memory leaks
+			if(command_busy >= command_size){
+				command_busy = 0;
+				memset(command, 0, command_size);
+				i = 1;
+			 }
+
+			 command[command_busy++] = frame[i];
+
+		}
+
+	}
+
+	// ===== DATA ==== //
+	//if all required signs are in place check if data exists {
+
+	if(required_pass == 3 && (data_idx != frameLength - 1)){
+		Send("Data exists!\r\n");
+		for(int i = data_idx; i <= frameLength - 1; i++){
+			//prevent memory leaks
+			if(data_busy >= data_size){
+				data_busy = 0;
+				memset(data, 0, data_size);
+				i = data_idx;
+			}
+			//copy data to the data table
+			data[data_busy++] = frame[i];
+
+		}
+
+	}
+
+
+}
+
+//download frame from data sent
+void downloadFrame(){
+
+	char byte = Rx_buff[Rx_busy]; //single frame char
+
+
+		//if found start of frame char
+		if(byte == 0x24 /* $ */ ){
+			memset(frame, 0x00, FRAME_SIZE); //reset frame
+			frame_found = 1; //set the flag to continue downloading chars
+			Frame_busy = 0x00;
+
+		}
+		//if frame found start downloading frame
+		if(frame_found == 1){
+			frameLength++;
+			//copy frame to analyze it
+			frame[Frame_busy++] = byte; //download chars
+		}
+
+		//check if frame is not too long
+
+		if(frameLength > FRAME_SIZE){
+			memset(frame, 0x00, FRAME_SIZE);
+			Frame_busy = 0;
+			frameLength = 0;
+			frame_found = 0;
+			Send("Fail: Frame too long} \n\r");
+		}
+
+		//check if its actually a frame
+		//todo
+
+
+		//if end of frame is reached
+		if(byte == 0x23 && frame_found == 1 /* # */ ){
+			frame_found = 0; //stop downloading chars
+			Frame_busy = 0; //reset frame
+
+
+		  //if frame is received, analyze it
+			decodeFrame();
+			parseCommand();
+
+			//reset framelength to zero
+
+			frameLength = 0;
+
+		 }
+
+		//control ringbuffer
+		Rx_busy++;
+		if(Rx_busy >= RX_BUFF_SIZE){
+			Rx_busy = 0;
+		}
+
+
+}
+
+
+
+ void downloadCmd(){
 
 	char temp = Rx_buff[Rx_busy];
 
+
 	if(temp == 0x3B /* ; */){
-		command[Cmd_busy] = 0x00;
-		parseCmd();
+		frame[Frame_busy] = 0x00;
+		parseCommand();
 
 	} else {
-		command[Cmd_busy] = temp;
+		frame[Frame_busy] = temp;
 	}
+
+
 
 	/* check cmd length */
 	if(temp != 0x3B){
-		Cmd_busy++;
-		if(Cmd_busy >= CMD_SIZE){
+		Frame_busy++;
+		if(Frame_busy >= FRAME_SIZE){
 			Rx_busy = Rx_empty;
-			Cmd_busy = 0;
+			Frame_busy = 0;
 
 		}
 
@@ -367,7 +717,7 @@ void buttonHandler() {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	UART_init();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -391,10 +741,19 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
 
+  /* ===== RTC set time ==== */
+  RTC_TimeTypeDef sTime;
+  RTC_DateTypeDef sDate;
+
+  setTime(sTime, 17, 26, 0);
+
+
   HAL_UART_Receive_IT(&huart2, &Rx_buff[Rx_empty], 1);
+
 
   Send("Hello, im STM32!\r\n");
 
@@ -404,6 +763,9 @@ int main(void)
   timer_value = __HAL_TIM_GET_COUNTER(&htim6);
 
 
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -411,11 +773,26 @@ int main(void)
   while (1)
   {
 
+
+	  //send time
+	  //HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+	  //Send("%2.2u:%2.2u:%2.2u\n\r", sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+
+	  //display hour if clock mode is set to display hour
+
+	  if(clock_mode == 2 && hour_displayed == 0 && hour_to_show != 0){
+		  displayHour(hour_to_show, minute_to_show, second_to_show);
+	   }
+
+
 	 buttonHandler();
 
 
-	 while(isRxBuffEmpty()){
-		 downloadCmd();
+	 while(uart_ready()){
+		 //downloadCmd();
+		 downloadFrame();
 	 }
 
 	 /* ==== LED BLINKING WITH TIMER AND NORMAL === */
@@ -461,9 +838,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
@@ -485,8 +863,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_RTC;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();

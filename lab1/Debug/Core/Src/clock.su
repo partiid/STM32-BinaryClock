@@ -1,0 +1,5 @@
+clock.c:51:5:splitNumber	32	static
+clock.c:73:5:convertToBinary	64	static
+clock.c:91:6:setTime	8	static
+clock.c:110:6:displayHour	40	static
+clock.c:175:6:resetPins	24	static

@@ -1,21 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
-		<item key="selection" value=" if(strcmp(command , &quot;LED[ON]&quot;) == 0){"/>
+		<item key="selection" value="setTime"/>
 		<item key="wrap" value="true"/>
 		<item key="casesensitive" value="false"/>
 		<item key="wholeword" value="false"/>
 		<item key="incremental" value="false"/>
 		<item key="isRegEx" value="false"/>
 		<list key="findhistory">
-			<item value=" if(strcmp(command , &quot;LED[ON]&quot;) == 0){"/>
-			<item value="x2hz"/>
-			<item value="&#x0D;&#x0A;&#x09;  int diodes_to_light = splitNumber(22);&#x0D;&#x0A;&#x0D;&#x0A;&#x0D;&#x0A;&#x09;  if(diodes_to_light == 1){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_SET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x0D;&#x0A;&#x09;  }&#x0D;&#x0A;&#x09;  if(diodes_to_light == 2){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_SET);&#x0D;&#x0A;&#x09;  }&#x0D;&#x0A;&#x09;  if(diodes_to_light == 0){&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BIA_GPIO_Port,BIA_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;&#x09;  HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, GPIO_PIN_RESET);&#x0D;&#x0A;&#x09;  }"/>
-			<item value="HAL_UART_IRQHandler"/>
-			<item value=" const char* getDiode(int num){"/>
-			<item value="WRITEPIN"/>
+			<item value="setTime"/>
+			<item value="Command not found"/>
+			<item value="setTime("/>
+			<item value="setTime()"/>
+			<item value="Data exists"/>
+			<item value="pin_minute_ones"/>
+			<item value="port_minute_ones"/>
+			<item value="displayHour"/>
+			<item value="  int j = 0;"/>
+			<item value="time:"/>
+			<item value="sscanf"/>
+			<item value="parseCmd()"/>
+			<item value="Cmd_busy"/>
+			<item value="CMD_SIZE"/>
+			<item value="frame"/>
 		</list>
 		<list key="replacehistory">
+			<item value="pin_minute_tens"/>
+			<item value="port_minute_tens"/>
+			<item value="parseCommand()"/>
+			<item value="parseCommand"/>
+			<item value="Frame_busy"/>
+			<item value="FRAME_SIZE"/>
+			<item value="frame"/>
 			<item value="x4hz"/>
 		</list>
 	</section>

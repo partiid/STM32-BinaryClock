@@ -102,6 +102,7 @@ void setTime(RTC_TimeTypeDef sTime, int8_t hours, uint8_t minutes, uint8_t secon
 	HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2048 - 1, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
 
 
+
 }
 
 
@@ -120,6 +121,7 @@ void displayHour(uint8_t hour, uint8_t minute, uint8_t second){
 				if(hour & (1 << i)){ //if bit is set
 
 					HAL_GPIO_WritePin(port_hour[i], pin_hour[i], 1);
+
 				}
 			};
 
@@ -145,7 +147,7 @@ void displayHour(uint8_t hour, uint8_t minute, uint8_t second){
 
 		//seconds
 
-			Send("Second: %d\r\n", second);
+			//Send("Second: %d\r\n", second);
 			for (int i = 0; i <= 4; i++){
 					    if (splitNumber(second, 0) & (1 << i)){
 					        HAL_GPIO_WritePin(port_second_ones[i], pin_second_ones[i], 1);

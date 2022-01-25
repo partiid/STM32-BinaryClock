@@ -108,6 +108,8 @@ typedef struct Time Struct;
 	uint8_t hour_displayed = 0;
 
 	RTC_HandleTypeDef hrtc;
+	static RTC_TimeTypeDef sTime;
+	static RTC_DateTypeDef sDate;
 
 
 	uint8_t volatile clock_mode = 1; //Sets the clock mode  1 -  CLOCK MODE ////// 2  - HOUR DISPLAY MODE
@@ -224,20 +226,24 @@ void UART_init(){
 
 /* ===== SEND USART ==== */
 
+/*send poprawiony - dodano flage */
+
 
 
 void Send(char* message, ...){
-	char temp[128];
+	char temp[256];
 
 	volatile int idx = Tx_empty;
-
+	int i;
 
 	va_list arglist;
 	va_start(arglist, message);
+
 	vsprintf(temp, message, arglist);
+
 	va_end(arglist);
 
-	for(int i = 0; i < strlen(temp); i++){
+	for(i = 0; i < strlen(temp); i++){
 		Tx_buff[idx] = temp[i];
 		idx++;
 		if(idx >= TX_BUFF_SIZE){
@@ -247,7 +253,7 @@ void Send(char* message, ...){
 	}
 	__disable_irq();
 
-	if(Tx_empty == Tx_busy){
+	if((Tx_empty == Tx_busy) && (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_TXE == SET))){
 		Tx_empty = idx;
 		uint8_t tmp = Tx_buff[Tx_busy];
 		Tx_busy++;
@@ -309,12 +315,28 @@ uint8_t uart_ready(){
 
 /* ======== RTC =========== */
 
+void checkNextAlarm(){
+
+}
+
+
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
-	static RTC_TimeTypeDef sTime;
+
+	/* place for checking if the next alarm is set */
+
+
+	//przy dodawaniu alarmu i przy przerwaniu alarmu sprawdzac czy jest alarm, który jest świeższy
+
+	//1. zapisywanie alarmu do flasha
+	//2. sprawdzenie czy alarm jest na wczesniejsza date od tego nowego
+	//3. jeśli jest wczesniejszy -> ustawienie tego alarmu
+	//4. przy callbacku alarmu pobrac alarmy z flasha i sprawdzic kolejny i ustawić go
+
 
 	HAL_RTC_GetTime(hrtc, &sTime, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(hrtc, &sDate, RTC_FORMAT_BIN);
 
-	Send("%2.2u:%2.2u:%2.2u\n\r", sTime.Hours, sTime.Minutes, sTime.Seconds);
+	//Send("%2.2u:%2.2u:%2.2u\n\r", sTime.Hours, sTime.Minutes, sTime.Seconds);
 	//HAL_GPIO_TogglePin(SEC_GPIO_Port, SEC_Pin);
 
 	 uint8_t hours = sTime.Hours;
@@ -345,20 +367,26 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
 void parseCommand(){
 	uint8_t picked_command = 0;
 
+
+	//porównywać znak po znaku każdą komendę?
+	//todo
+
 	if(strcmp("setMode", command) == 0){
 		int mode = parseIntData();
 		handleSetClockMode(mode);
 
 
-	} /* else if (strcmp("setTime", command) == 0){
+	} else if (strcmp("setTime", command) == 0){
 		parseTime();
 		resetPins();
-
 
 		setTime(hour_to_show, minute_to_show, second_to_show);
 
 
-	} */else if(strcmp("setAlarm", command) == 0){
+	} else if (strcmp("getTime", command) == 0) {
+		Send("$Success=%2.2u:%2.2u:%2.2u#\r\n", sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+	}else if(strcmp("setAlarm", command) == 0){
 
 
 
@@ -381,7 +409,7 @@ void parseCommand(){
 
 	}
 	else {
-		Send("Fail: {Command not found!}\n\r");
+		sendFail(1);
 	}
 
 	//handle picked command
@@ -423,11 +451,11 @@ void parseTime(){
 	minute_to_show = 0;
 	second_to_show = 0;
 
-	 if(sscanf(data, "%d:%d:%d", &hour_to_show, &minute_to_show, &second_to_show) == 3){
-		 Send("Success {Time parsed correctly} \r\n");
+	 if(sscanf(data, "%2.2u:%2.2u:%2.2u", &hour_to_show, &minute_to_show, &second_to_show) == 3){
+		 Send("$Success=1#\r\n");
 
 	 } else {
-		 Send("Fail: {Data not acceptable}\r\n");
+		 sendFail(2);
 	 }
 }
 
@@ -441,7 +469,7 @@ int parseIntData(){
 		return single_param;
 	}
 	else {
-			Send("Fail: {Data not acceptable}\r\n");
+		sendFail(2);
 	}
 
 
@@ -463,6 +491,9 @@ void clearData(){
 }
 
 
+
+
+
 /* ===== HANDLERS FOR SPECIFIC COMMANDS ====== */
 
 
@@ -470,26 +501,26 @@ void handleSetClockMode(int mode){
 
 		if(mode == 1 || mode == 2){
 
-				clock_mode = mode;
-				Send("Success: {Running in showHourMode}\r\n");
+			clock_mode = mode;
+			Send("$Success=1#\r\n");
 
-			}else {
-				Send("Data Not Acceptable\r\n");
-			}
-
-
-
+		}else {
+				sendFail(4);
+		}
 
 
 }
 
 void handleShowHour(uint8_t  hour, uint8_t  minute, uint8_t second){
+	resetPins();
 
 		if((hour > 0 && hour < 23) && (minute >= 0 && minute <= 59) && (second >= 0 && second <= 59)){
 
 			 hour_displayed = 0;
+
+
 			} else {
-				Send("Fail: {Data Not Acceptable} \r\n");
+				sendFail(4);
 			}
 
 
@@ -558,7 +589,7 @@ void decodeFrame() {
 	//if all required signs are in place check if data exists {
 
 	if(required_pass == 3 && (data_idx != frameLength - 1)){
-		Send("Data exists!\r\n");
+		//Send("Data exists!\r\n");
 		for(int i = data_idx; i <= frameLength - 1; i++){
 			//prevent memory leaks
 			if(data_busy >= data_size){
@@ -580,6 +611,14 @@ void decodeFrame() {
 void downloadFrame(){
 
 	char byte = Rx_buff[Rx_busy]; //single frame char
+	uint16_t frame_start_buff;
+
+	//control ringbuffer
+	Rx_busy++;
+
+	if(Rx_busy >= RX_BUFF_SIZE){
+		Rx_busy = 0;
+	}
 
 
 		//if found start of frame char
@@ -587,24 +626,29 @@ void downloadFrame(){
 			memset(frame, 0x00, FRAME_SIZE); //reset frame
 			frame_found = 1; //set the flag to continue downloading chars
 			Frame_busy = 0x00;
+			frame_start_buff = Rx_busy;
 
 		}
-		//if frame found start downloading frame
-		if(frame_found == 1){
-			frameLength++;
-			//copy frame to analyze it
-			frame[Frame_busy++] = byte; //download chars
-		}
-
 		//check if frame is not too long
-
 		if(frameLength > FRAME_SIZE){
 			memset(frame, 0x00, FRAME_SIZE);
 			Frame_busy = 0;
 			frameLength = 0;
 			frame_found = 0;
-			Send("Fail: Frame too long} \n\r");
+			sendFail(4);
 		}
+
+		//if frame found start downloading frame
+		if(frame_found == 1){
+			//todo check frame length if more than one start sign is found
+			frameLength = Rx_busy - frame_start_buff;
+
+			//copy a frame to analyze it
+			frame[Frame_busy++] = byte; //download chars
+		}
+
+
+
 
 		//check if its actually a frame
 		//todo
@@ -614,6 +658,7 @@ void downloadFrame(){
 		if(byte == 0x23 && frame_found == 1 /* # */ ){
 			frame_found = 0; //stop downloading chars
 			Frame_busy = 0; //reset frame
+
 
 
 		  //if frame is received, analyze it
@@ -626,11 +671,8 @@ void downloadFrame(){
 
 		 }
 
-		//control ringbuffer
-		Rx_busy++;
-		if(Rx_busy >= RX_BUFF_SIZE){
-			Rx_busy = 0;
-		}
+
+
 
 
 }
@@ -708,6 +750,23 @@ void buttonHandler() {
 
 }
 
+/* send functions
+ *
+ *
+ */
+void sendFail(uint8_t code){
+
+	Send("$Fail=%d#", code);
+
+
+
+}
+
+
+void sendTime(uint8_t hr, uint8_t min, uint8_t sec){
+	Send("$Hour=%2.2u:%2.2u:%2.2u", hr, min, sec);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -749,13 +808,21 @@ int main(void)
   RTC_TimeTypeDef sTime;
   RTC_DateTypeDef sDate;
 
-  setTime(sTime, 17, 26, 0);
+//setTime(sTime, 17, 26, 0);
+  HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
+  HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2048 - 1, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
 
 
   HAL_UART_Receive_IT(&huart2, &Rx_buff[Rx_empty], 1);
 
 
-  Send("Hello, im STM32!\r\n");
+  Send("$Success=Hello, im STM32!#\r\n");
+
+  //uint32_t data2 = {0x3, 0x13, 0x12};
+  //flash_write(0x08004410, (uint32_t*)data2, 3);
+
+
+
 
   /* === TIMER INIT ===== */
   HAL_TIM_Base_Start(&htim6);

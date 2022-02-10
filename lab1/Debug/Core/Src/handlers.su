@@ -1,0 +1,6 @@
+handlers.c:26:6:handleSetClockMode	16	static
+handlers.c:50:6:handleShowHour	16	static
+handlers.c:67:5:encodeDateTime	24	static
+handlers.c:78:6:handleSetAlarm	48	static
+handlers.c:145:6:handleResetAlarms	8	static
+handlers.c:153:9:handleGetAlarms	16	static

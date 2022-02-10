@@ -1,28 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
-		<item key="selection" value="setTime"/>
+		<item key="selection" value="&#x0A;&#x09;&#x09;counter = start_idx;&#x0A;&#x0A;&#x09;&#x09;uint8_t arr_idx = 0;&#x0A;&#x09;&#x09;uint8_t arr_size = 5;&#x0A;&#x0A;&#x0A;&#x09;&#x09;Send(&quot;Counter at: %d\r\n Array size: %d&quot;, counter, arr_size);&#x0A;&#x0A;&#x09;&#x09;for(int i = 0; i &lt; arr_size; i++){&#x0A;&#x0A;&#x09;&#x09;&#x09;FlashTx_buff[FlashTx_busy++] = data[i];&#x0A;&#x0A;&#x09;&#x09;}"/>
 		<item key="wrap" value="true"/>
 		<item key="casesensitive" value="false"/>
 		<item key="wholeword" value="false"/>
 		<item key="incremental" value="false"/>
 		<item key="isRegEx" value="false"/>
 		<list key="findhistory">
+			<item value="&#x0A;&#x09;&#x09;counter = start_idx;&#x0A;&#x0A;&#x09;&#x09;uint8_t arr_idx = 0;&#x0A;&#x09;&#x09;uint8_t arr_size = 5;&#x0A;&#x0A;&#x0A;&#x09;&#x09;Send(&quot;Counter at: %d\r\n Array size: %d&quot;, counter, arr_size);&#x0A;&#x0A;&#x09;&#x09;for(int i = 0; i &lt; arr_size; i++){&#x0A;&#x0A;&#x09;&#x09;&#x09;FlashTx_buff[FlashTx_busy++] = data[i];&#x0A;&#x0A;&#x09;&#x09;}"/>
+			<item value="Tx_empty"/>
+			<item value="//&#x09;int i = 0;"/>
+			<item value="sendFail(1)"/>
+			<item value="sendFail(2)"/>
 			<item value="setTime"/>
 			<item value="Command not found"/>
 			<item value="setTime("/>
-			<item value="setTime()"/>
-			<item value="Data exists"/>
-			<item value="pin_minute_ones"/>
-			<item value="port_minute_ones"/>
-			<item value="displayHour"/>
-			<item value="  int j = 0;"/>
-			<item value="time:"/>
-			<item value="sscanf"/>
-			<item value="parseCmd()"/>
-			<item value="Cmd_busy"/>
-			<item value="CMD_SIZE"/>
-			<item value="frame"/>
 		</list>
 		<list key="replacehistory">
 			<item value="pin_minute_tens"/>

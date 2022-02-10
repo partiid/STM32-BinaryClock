@@ -1,0 +1,152 @@
+/*
+ * handlers.c
+ *
+ *  Created on: 26 sty 2022
+ *      Author: NASA
+ */
+#include "main.h"
+#include "clock.h"
+#include <math.h>
+
+
+
+extern  uint8_t clock_mode;
+extern uint8_t hour_to_show, minute_to_show, second_to_show;
+extern uint8_t hour_displayed;
+
+extern RTC_AlarmTypeDef sAlarm;
+extern RTC_DateTypeDef sDate;
+extern RTC_HandleTypeDef* hrtc;
+/* ===== HANDLERS FOR SPECIFIC COMMANDS ====== */
+
+
+
+//handler for setMode
+
+void handleSetClockMode(){
+
+		int mode = parseIntData();
+
+		if(mode == 1 || mode == 2){
+
+			clock_mode = mode;
+
+			if(mode == 2){
+				resetPins();
+				displayHour(hour_to_show, minute_to_show, second_to_show);
+			}
+
+			Send("$Success=1#\r\n");
+
+		}else {
+				sendFail(4);
+		}
+
+
+}
+
+
+//handler for showHour
+void handleShowHour(uint8_t  hour, uint8_t  minute, uint8_t second){
+	resetPins();
+
+		if((hour > 0 && hour < 23) && (minute >= 0 && minute <= 59) && (second >= 0 && second <= 59)){
+
+			 hour_displayed = 0;
+
+			} else {
+				sendFail(4);
+	        }
+
+
+}
+
+
+
+/* ===== alrams ==== */
+int encodeDateTime(uint8_t* arr, size_t len){
+	int result = 0;
+
+	for(int i = 0; i < len; i++){
+		result = 10 * result + arr[i];
+	}
+
+	return result;
+}
+
+//handler for setAlarm
+void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t year, uint8_t hour, uint8_t minute){
+
+	uint8_t max_days = getNumOfDaysInMonth(month);
+
+	//fill array to encode it and save to flash
+	int to_encode[5];
+
+	to_encode[0] = day;
+	to_encode[1] = month;
+	to_encode[2] = year;
+	to_encode[3] = hour;
+	to_encode[4] = minute;
+
+
+	//int encoded = encodeDateTime(to_encode, 5);
+	//Send("Encoded: %d\r\n", encoded);
+
+
+
+
+	if(year >= 22 && (month > 0 && month <= max_days)){
+
+		if((month > 0 && month <= 12) && (hour > 0 && hour < 23) && (minute >= 0 && minute <= 59)){
+
+
+			Send("$Success=1#\r\n");
+
+
+
+			sAlarm.AlarmTime.Hours = hour;
+			sAlarm.AlarmTime.Minutes = minute;
+			sAlarm.AlarmTime.Seconds = 0;
+			sAlarm.AlarmDateWeekDay = sDate.Date;
+			sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+			sAlarm.Alarm = RTC_ALARM_A;
+
+			int start_idx = Flash_getFreeSpace() - 1;
+			Send("Start idx: %d\r\n", start_idx);
+
+			Flash_write(to_encode, start_idx);
+
+
+
+
+
+
+			while(HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK){
+				Error_Handler();
+				sendFail(4);
+			};
+
+
+
+			} else {
+				sendFail(2);
+			}
+
+	} else {
+		sendFail(2);
+	}
+}
+
+
+void handleResetAlarms(){
+	Flash_flush();
+	Send("$Success=1#\r\n");
+}
+
+
+
+
+uint8_t handleGetAlarms(){
+	uint8_t status = HAL_RTC_GetAlarm(&hrtc, &sAlarm, RTC_ALARM_A, RTC_FORMAT_BIN);
+	return status;
+}

@@ -16,3 +16,15 @@ Tx_busy
 Tx_empty
 minute_to_show
 second_to_show
+test2
+day_to_set
+month_to_set
+year_to_set
+hour_to_set
+minute_to_set
+counter
+Flash_buff
+bt
+FlashTx_buff
+FlashTx_busy
+FlashTx_empty

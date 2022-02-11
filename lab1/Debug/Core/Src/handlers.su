@@ -1,6 +1,8 @@
 handlers.c:26:6:handleSetClockMode	16	static
 handlers.c:50:6:handleShowHour	16	static
-handlers.c:67:5:encodeDateTime	24	static
-handlers.c:78:6:handleSetAlarm	48	static
-handlers.c:145:6:handleResetAlarms	8	static
-handlers.c:153:9:handleGetAlarms	16	static
+handlers.c:69:6:compareAlarm	40	static
+handlers.c:126:9:compareAlarms	16	static
+handlers.c:193:18:getAlarm	64	static
+handlers.c:215:6:handleSetAlarm	376	static
+handlers.c:344:6:handleResetAlarms	8	static
+handlers.c:353:6:handleGetAlarms	128	static

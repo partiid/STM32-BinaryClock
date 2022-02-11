@@ -135,6 +135,7 @@
 
 	uint8_t volatile hour_to_set = 0;
 	uint8_t volatile minute_to_set = 0;
+	uint8_t volatile second_to_set = 0;
 
 
 
@@ -335,9 +336,6 @@ uint8_t uart_ready(){
 
 /* ======== RTC =========== */
 
-void checkNextAlarm(){
-
-}
 
 
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
@@ -347,7 +345,8 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
 
 	//przy dodawaniu alarmu i przy przerwaniu alarmu sprawdzac czy jest alarm, który jest świeższy
 
-	//1. zapisywanie alarmu do flasha
+	// zapisywanie alarmu do flasha
+
 	//2. sprawdzenie czy alarm jest na wczesniejsza date od tego nowego
 	//3. jeśli jest wczesniejszy -> ustawienie tego alarmu
 	//4. przy callbacku alarmu pobrac alarmy z flasha i sprawdzic kolejny i ustawić go
@@ -364,13 +363,12 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
 	 uint8_t seconds = sTime.Seconds;
 
 
-	 //int hour = splitNumber(seconds);
 	 if(clock_mode == 1){
 		 displayHour(hours, minutes, seconds);
 	 }
 
 
-	 //hr = &hour;
+
 
 
 }
@@ -417,17 +415,11 @@ void parseCommand(){
 //		HAL_I2C_Mem_Write(&hi2c1, 0xa0, 0x10, 1, (uint8_t*)&test, sizeof(test), HAL_MAX_DELAY);
 
 		parseDateTime();
-		handleSetAlarm(sDate, day_to_set, month_to_set, year_to_set, hour_to_set, minute_to_set);
-
+		handleSetAlarm(sDate, day_to_set, month_to_set, year_to_set, hour_to_set, minute_to_set, second_to_set);
 
 
 	} else if(strcmp("getAlarms", command) == 0){
-		//HAL_I2C_Mem_Read(&hi2c1, 0xa0, 0x01, 1, (uint8_t*)&test2, sizeof(test2), HAL_MAX_DELAY);
-
-		//uint8_t status = handleGetAlarms();
-		//Send("%d", status);
-		Flash_read();
-
+		handleGetAlarms();
 
 
 	} else if (strcmp("getAlarmsCount", command) == 0){
@@ -436,8 +428,6 @@ void parseCommand(){
 
 	} else if (strcmp("resetAlarms", command) == 0){
 		handleResetAlarms();
-
-
 
 	} else if (strcmp("showHour", command) == 0){
 
@@ -505,7 +495,7 @@ void parseTime(){
 
 void parseDateTime(){
 
-	if(sscanf(data, "%d/%d/%d/%d:%d", &day_to_set, &month_to_set, &year_to_set, &hour_to_set, &minute_to_set) == 5){
+	if(sscanf(data, "%d/%d/%d/%d:%d:%d", &day_to_set, &month_to_set, &year_to_set, &hour_to_set, &minute_to_set, &second_to_set) == 6){
 
 
 	} else {
@@ -567,6 +557,8 @@ void decodeFrame() {
 	if(frame[0] == start_sign){
 		required_pass++;
 		frame[0] = 0x00;
+		//if char was received, consider it as first sign so the length should be + 1
+		frameLength++;
 	}
 
 	//check if end exists
@@ -642,11 +634,22 @@ void downloadFrame(){
 	}
 		//if found start of frame char
 		if(byte == 0x24 /* $ */ ){
-			memset(frame, 0x00, FRAME_SIZE); //reset frame
+			memset(frame, 0x00, FRAME_SIZE); //reset frame2#
 			frame_found = 1; //set the flag to continue downloading chars
 			Frame_busy = 0x00;
 
+		} else if(frame_found == 1){ //frame length if more than one start sign is found
+			frameLength++;
 		}
+
+		if(frame_found == 1)
+			{
+
+						//copy a frame to analyze it
+						frame[Frame_busy++] = byte; //download chars
+
+
+			}
 
 		//check if frame is not too long
 		if(frameLength > FRAME_SIZE){
@@ -659,18 +662,7 @@ void downloadFrame(){
 
 
 		//if frame found start downloading frame
-		if(frame_found == 1){
-			//todo check frame length if more than one start sign is found
-			frameLength++;
 
-
-			//todo check for multiple end signs
-
-			//copy a frame to analyze it
-			frame[Frame_busy++] = byte; //download chars
-
-
-		}
 
 		//check if its actually a frame
 		//todo
@@ -680,8 +672,6 @@ void downloadFrame(){
 		if(byte == 0x23 && frame_found == 1 /* # */ ){
 			frame_found = 0; //stop downloading chars
 			Frame_busy = 0; //reset frame
-
-
 
 		  //if frame is received, analyze it
 			decodeFrame();

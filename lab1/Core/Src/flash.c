@@ -13,7 +13,7 @@
 int counter = 0x00; //counter of the current top address
 extern I2C_HandleTypeDef hi2c1;
 
-uint16_t FlashTx_buff[128];
+uint16_t FlashTx_buff[FLASHTX_BUFF_SIZE];
 
 
 uint8_t FlashTx_empty = 0; //tail //read
@@ -28,7 +28,7 @@ void FLASH_init(){
 
 	FlashTx_empty = 0;
 	FlashTx_busy = 0;
-	memset(FlashTx_buff, 0, FLASHTX_BUFF_SIZE);
+	memset(FlashTx_buff, 0x255, FLASHTX_BUFF_SIZE);
 }
 
 
@@ -55,33 +55,11 @@ void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 
 
 
-void getAddress(){
-
-	HAL_I2C_Mem_Read(&hi2c1, 0xa0, COUNTER_ADDR, 1, (uint8_t*)&counter, sizeof(counter), HAL_MAX_DELAY);
-
-
-}
-
-//gets the last address of memory written and increments it
-void setAddress(){
-
-	HAL_I2C_Mem_Write(&hi2c1, 0xa0, COUNTER_ADDR, 1, (uint8_t*)&counter, sizeof(counter), HAL_MAX_DELAY);
-
-
-
-
-}
-
-void resetAddress(){
-	uint8_t zero = 0;
-	HAL_I2C_Mem_Write(&hi2c1, 0xa0, COUNTER_ADDR, 1, (uint8_t*)&zero, sizeof(zero), HAL_MAX_DELAY);
-
-}
 
 
 void Flash_flush(){
 	uint8_t zero = 0xff;
-	for(int i = 0; i <= 100; i++){
+	for(int i = 0; i <= FLASHTX_BUFF_SIZE; i++){
 		HAL_I2C_Mem_Write_IT(&hi2c1, 0xa0, i, 1 , (uint8_t*)&zero, sizeof(zero));
 		HAL_Delay(5);
 	}
@@ -95,9 +73,14 @@ void Flash_write(int data[], int start_idx){
 
 		counter = start_idx;
 
-		uint8_t arr_idx = 0;
-		uint8_t arr_size = 5;
 
+		uint8_t arr_idx = 0;
+		uint8_t arr_size = 6;
+
+		//control memory
+		if(counter >= FLASHTX_BUFF_SIZE - arr_size - 1){
+			counter = 0;
+		}
 
 		Send("Counter at: %d\r\n", counter);
 
@@ -118,32 +101,41 @@ void Flash_write(int data[], int start_idx){
 }
 
 
-void Flash_read(){
+int *Flash_read(){
+	FLASH_init();
 	uint8_t byte = 0x00;
-		for(int i = 0; i < 10; i++){
-			HAL_I2C_Mem_Read(&hi2c1, 0xa1, i, 1, (uint8_t*)&byte, sizeof(byte), HAL_MAX_DELAY);
-			Send("byte: %d\r\n", byte);
+	uint8_t data_found = 0;
+
+
+	uint8_t page = 0;
+	for(page = 0; page <= 128; page++){
+		HAL_I2C_Mem_Read(&hi2c1, 0xa1, page, 1, (uint8_t*)&byte, sizeof(byte), HAL_MAX_DELAY);
+
+		//if byte is found then start downloading bytes to buffer
+		if(byte != 0x00 && byte != 0x255){
+			//FlashTx_buff[Tx_busy++] = byte;
+			data_found = 1;
+
 		}
 
-	//Flash_getFreeSpace();
-
-	//HAL_I2C_Mem_Read(&hi2c1, 0xa0, 0x01, 1, (uint16_t*)&bt, sizeof(bt), HAL_MAX_DELAY);
-
-	//Send("%x, %d", bt, bt);
-	//getAddress();
-
-//	for(int i = 0x00; i < counter; i++){
-//		Send("%x", i);
-//
-//		if(bt != 0){
-//				Flash_buff[Flash_rx++] = bt;
-//				if(Flash_rx >= 128){
-//					Flash_rx = 0;
-//				}
-//			}
-//	}
+		if(data_found == 1){
+				FlashTx_buff[FlashTx_busy++] = byte;
+				if(FlashTx_busy >= FLASHTX_BUFF_SIZE){
+					FlashTx_busy = 0;
+				}
+				//if too many zeros found stop downlaoding to save only data
+				if(byte == 0x00 || byte == 0x255){
+					data_found = 0;
+				}
+		}
 
 }
+
+	return FlashTx_buff;
+
+}
+
+// function to get first free address to write to
 int Flash_getFreeSpace(){
 	uint8_t byte = 0x00;
 	int i = 0;
@@ -155,18 +147,6 @@ int Flash_getFreeSpace(){
 	}
 	return i;
 
-
-
-
-
-
-
-	//HAL_I2C_Mem_Write(&hi2c1, 0xa0, 0x01, 1, (uint16_t*)&data, sizeof(data), HAL_MAX_DELAY);
-
-//	for(int i = 0; i < 10; i++){
-//		HAL_I2C_Mem_Read(&hi2c1, 0xa0, i, 1, (uint8_t*)&byte, sizeof(byte), HAL_MAX_DELAY);
-//		Send("byte: %d\r\n", byte);
-//	}
 
 }
 

@@ -3,4 +3,4 @@ clock.c:77:5:convertToBinary	64	static
 clock.c:95:6:setTime	8	static
 clock.c:124:6:displayHour	40	static
 clock.c:190:6:resetPins	24	static
-clock.c:210:9:getNumOfDaysInMonth	16	static
+clock.c:214:9:getNumOfDaysInMonth	16	static

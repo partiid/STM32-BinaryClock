@@ -552,13 +552,14 @@ void decodeFrame() {
 		uint8_t command_end_idx = 0;
 		uint8_t required_pass = 0; //check if all the required signs are in the frame
 
+	frameLength++;
 
 	//check if begining exists
 	if(frame[0] == start_sign){
 		required_pass++;
 		frame[0] = 0x00;
 		//if char was received, consider it as first sign so the length should be + 1
-		frameLength++;
+
 	}
 
 	//check if end exists
@@ -637,16 +638,23 @@ void downloadFrame(){
 			memset(frame, 0x00, FRAME_SIZE); //reset frame2#
 			frame_found = 1; //set the flag to continue downloading chars
 			Frame_busy = 0x00;
+			frameLength = 0;
 
 		} else if(frame_found == 1){ //frame length if more than one start sign is found
+
+
 			frameLength++;
+
 		}
 
 		if(frame_found == 1)
 			{
 
-						//copy a frame to analyze it
-						frame[Frame_busy++] = byte; //download chars
+
+				//copy a frame to analyze it
+					frame[Frame_busy++] = byte; //download chars
+
+
 
 
 			}

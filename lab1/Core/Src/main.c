@@ -372,10 +372,6 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc){
 
 
 }
-/* alarm a callback */
-void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc){
-	HAL_GPIO_WritePin(BRO_GPIO_Port, BRO_Pin, 1);
-}
 
 
 
@@ -402,7 +398,7 @@ void parseCommand(){
 		parseTime();
 		resetPins();
 
-		setTime(sTime, sDate, hour_to_show, minute_to_show, second_to_show);
+		setTime(sTime, hour_to_show, minute_to_show, second_to_show);
 
 
 	} else if (strcmp("getTime", command) == 0) {
@@ -518,6 +514,59 @@ int parseIntData(){
 
 
 }
+//function to parse alarms downloaded from flash
+
+void parseAlarms(int alarms[], int alarm_to_set[]){
+
+//					alarm_to_set[0] = day;
+//					alarm_to_set[1] = month;
+//					alarm_to_set[2] = year;
+//					alarm_to_set[3] = hour;
+//					alarm_to_set[4] = minute;
+//					alarm_to_set[5] = second;
+
+
+	uint8_t day = alarm_to_set[0];
+	uint8_t month = alarm_to_set[1];
+
+
+
+	uint8_t alarms_size = sizeof(alarms) / sizeof(alarms[0]);
+
+	uint8_t day_start_idx = 0;
+	uint8_t month_start_idx = 0;
+	uint8_t year_start_idx = 0;
+	uint8_t hour_start_idx = 0;
+
+
+
+	for(int i = 0; i < alarms_size; i++){
+		//
+		if(i == 0 ){
+			day_start_idx = i;
+
+		}
+		if(i == 1){
+			month_start_idx = i;
+		}
+	}
+
+	//check day - if day is eq or gt check next
+	//inc by 5 to check only days
+	for(int i = day_start_idx; i < alarms_size; i+=5){
+
+	}
+
+	//check month
+	for(int i = month_start_idx; i < alarms_size; i+=5){
+
+	}
+
+
+
+
+}
+
 
 
 /* ==== clear after command is executed to receive next command " ==== */
@@ -552,7 +601,7 @@ void decodeFrame() {
 		uint8_t command_end_idx = 0;
 		uint8_t required_pass = 0; //check if all the required signs are in the frame
 
-	frameLength++;
+
 
 	//check if begining exists
 	if(frame[0] == start_sign){
@@ -635,27 +684,24 @@ void downloadFrame(){
 	}
 		//if found start of frame char
 		if(byte == 0x24 /* $ */ ){
-			memset(frame, 0x00, FRAME_SIZE); //reset frame2#
+			memset(frame, 0x00, FRAME_SIZE); //reset frame #
 			frame_found = 1; //set the flag to continue downloading chars
-			Frame_busy = 0x00;
-			frameLength = 0;
+
+			Frame_busy = 0;
+			frameLength = 1; //set frame length to one cos $ is already in the frame
 
 		} else if(frame_found == 1){ //frame length if more than one start sign is found
-
 
 			frameLength++;
 
 		}
 
-		if(frame_found == 1)
-			{
-
+		//if frame found start downloading frame
+		//start downloading the frame
+		if(frame_found == 1){
 
 				//copy a frame to analyze it
 					frame[Frame_busy++] = byte; //download chars
-
-
-
 
 			}
 
@@ -667,13 +713,6 @@ void downloadFrame(){
 			frame_found = 0;
 			sendFail(4);
 		}
-
-
-		//if frame found start downloading frame
-
-
-		//check if its actually a frame
-		//todo
 
 
 		//if end of frame is reached
@@ -780,10 +819,12 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
-  MX_RTC_Init();
+
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != 0x32F2){
+	  MX_RTC_Init();
+  }
 
   /* ===== RTC set time ==== */
   RTC_TimeTypeDef sTime;
@@ -795,7 +836,7 @@ int main(void)
 
   //set time
   HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
-  HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2048 - 1, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
+  HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2500 - 1, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
 
 
   HAL_UART_Receive_IT(&huart2, &Rx_buff[Rx_empty], 1);
@@ -851,7 +892,7 @@ int main(void)
 
 
 	 while(uart_ready()){
-		 //downloadCmd();
+
 		 downloadFrame();
 	 }
 

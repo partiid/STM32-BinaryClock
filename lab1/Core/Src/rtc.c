@@ -22,6 +22,9 @@
 
 /* USER CODE BEGIN 0 */
 
+
+
+
 /* USER CODE END 0 */
 
 RTC_HandleTypeDef hrtc;
@@ -56,26 +59,32 @@ void MX_RTC_Init(void)
   }
 
   /* USER CODE BEGIN Check_RTC_BKUP */
-  HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-  HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-  return;
+
+  if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) == 0x32f2){
+
+	  return;
+  }
+
+
+
+
   /* USER CODE END Check_RTC_BKUP */
 
   /** Initialize RTC and set the Time and Date
   */
-  sTime.Hours = 13;
-  sTime.Minutes = 58;
-  sTime.Seconds = 0;
+  sTime.Hours = 23;
+  sTime.Minutes = 59;
+  sTime.Seconds = 55;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
   if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
   {
     Error_Handler();
   }
-  sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
-  sDate.Month = RTC_MONTH_JANUARY;
-  sDate.Date = 30;
+  sDate.WeekDay = RTC_WEEKDAY_WEDNESDAY;
+  sDate.Month = RTC_MONTH_FEBRUARY;
+  sDate.Date = 15;
   sDate.Year = 22;
 
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
@@ -84,9 +93,9 @@ void MX_RTC_Init(void)
   }
   /** Enable the Alarm A
   */
-  sAlarm.AlarmTime.Hours = 0;
-  sAlarm.AlarmTime.Minutes = 0;
-  sAlarm.AlarmTime.Seconds = 0;
+  sAlarm.AlarmTime.Hours = 13;
+  sAlarm.AlarmTime.Minutes = 20;
+  sAlarm.AlarmTime.Seconds = 30;
   sAlarm.AlarmTime.SubSeconds = 0;
   sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -113,7 +122,9 @@ void MX_RTC_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN RTC_Init 2 */
-
+  //write backup registry
+  //HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0x32F2);
+  HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0x32F2);
   /* USER CODE END RTC_Init 2 */
 
 }
@@ -135,6 +146,8 @@ void HAL_RTC_MspInit(RTC_HandleTypeDef* rtcHandle)
     HAL_NVIC_SetPriority(RTC_Alarm_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);
   /* USER CODE BEGIN RTC_MspInit 1 */
+
+    HAL_PWR_EnableBkUpAccess();
 
   /* USER CODE END RTC_MspInit 1 */
   }

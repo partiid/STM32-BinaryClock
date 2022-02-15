@@ -28,7 +28,7 @@ void FLASH_init(){
 
 	FlashTx_empty = 0;
 	FlashTx_busy = 0;
-	memset(FlashTx_buff, 0x255, FLASHTX_BUFF_SIZE);
+	memset(FlashTx_buff, 255, FLASHTX_BUFF_SIZE);
 }
 
 
@@ -69,12 +69,12 @@ void Flash_flush(){
 
 uint8_t bt = 0;
 
-void Flash_write(int data[], int start_idx){
+void Flash_write(uint8_t data[], int start_idx){
 
 		counter = start_idx;
 
 
-		uint8_t arr_idx = 0;
+
 		uint8_t arr_size = 6;
 
 		//control memory
@@ -82,14 +82,20 @@ void Flash_write(int data[], int start_idx){
 			counter = 0;
 		}
 
+
 		Send("Counter at: %d\r\n", counter);
 
-		for(int i = 0; i < arr_size; i++){
+		for(int i = 0; i < arr_size ; i++){
+			if(i == 0){
+				Send("%d", data[i]);
+			}
 			HAL_I2C_Mem_Write_IT(&hi2c1, 0xa0, counter, 1 , (uint8_t*)&data[i], sizeof(data[i]));
 			//FlashTx_buff[FlashTx_busy++] = data[i];
+
 			counter++;
 			HAL_Delay(5);
 		}
+
 
 
 
@@ -103,6 +109,7 @@ void Flash_write(int data[], int start_idx){
 
 int *Flash_read(){
 	FLASH_init();
+
 	uint8_t byte = 0x00;
 	uint8_t data_found = 0;
 
@@ -112,7 +119,7 @@ int *Flash_read(){
 		HAL_I2C_Mem_Read(&hi2c1, 0xa1, page, 1, (uint8_t*)&byte, sizeof(byte), HAL_MAX_DELAY);
 
 		//if byte is found then start downloading bytes to buffer
-		if(byte != 0x00 && byte != 0x255){
+		if(byte != 0x00 ){
 			//FlashTx_buff[Tx_busy++] = byte;
 			data_found = 1;
 
@@ -124,7 +131,7 @@ int *Flash_read(){
 					FlashTx_busy = 0;
 				}
 				//if too many zeros found stop downlaoding to save only data
-				if(byte == 0x00 || byte == 0x255){
+				if(byte == 0x00 ){
 					data_found = 0;
 				}
 		}

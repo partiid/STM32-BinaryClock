@@ -5,6 +5,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/alarms.c \
 ../Core/Src/clock.c \
 ../Core/Src/flash.c \
 ../Core/Src/gpio.c \
@@ -21,6 +22,7 @@ C_SRCS += \
 ../Core/Src/usart.c 
 
 OBJS += \
+./Core/Src/alarms.o \
 ./Core/Src/clock.o \
 ./Core/Src/flash.o \
 ./Core/Src/gpio.o \
@@ -37,6 +39,7 @@ OBJS += \
 ./Core/Src/usart.o 
 
 C_DEPS += \
+./Core/Src/alarms.d \
 ./Core/Src/clock.d \
 ./Core/Src/flash.d \
 ./Core/Src/gpio.d \

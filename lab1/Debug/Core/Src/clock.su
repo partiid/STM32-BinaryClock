@@ -1,6 +1,6 @@
 clock.c:55:5:splitNumber	32	static
 clock.c:77:5:convertToBinary	64	static
 clock.c:95:6:setTime	8	static
-clock.c:124:6:displayHour	40	static
-clock.c:190:6:resetPins	24	static
-clock.c:214:9:getNumOfDaysInMonth	16	static
+clock.c:137:6:displayHour	40	static
+clock.c:203:6:resetPins	24	static
+clock.c:227:9:getNumOfDaysInMonth	16	static

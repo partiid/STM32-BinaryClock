@@ -15,7 +15,7 @@
 
 
 extern RTC_HandleTypeDef hrtc;
-
+extern RTC_DateTypeDef sDate;
 extern uint8_t hour_displayed;
 
 
@@ -92,7 +92,7 @@ int convertToBinary(int num){
 
 
 
-void setTime(RTC_TimeTypeDef sTime, RTC_DateTypeDef sDate, int8_t hours, uint8_t minutes, uint8_t seconds){
+void setTime(RTC_TimeTypeDef sTime, int8_t hours, uint8_t minutes, uint8_t seconds){
 
 	HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
 
@@ -104,13 +104,26 @@ void setTime(RTC_TimeTypeDef sTime, RTC_DateTypeDef sDate, int8_t hours, uint8_t
 
 
 	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
+	{
+		Error_Handler();
+	}
 
-	sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
-	sDate.Date = 30;
-	sDate.Month = 1;
-	sDate.Year = 22;
+//	sDate.WeekDay = RTC_WEEKDAY_SATURDAY;
+//	sDate.Date = 13;
+//	sDate.Month = 2;
+//	sDate.Year = 22;
 
-	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+	//HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+	//handle errors
+
+
+//	  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
+//	  {
+//	    Error_Handler();
+//	  }
+
+	HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0x32F2);
 
 	HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2048 - 1, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
 

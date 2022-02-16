@@ -2,5 +2,5 @@ flash.c:26:6:FLASH_init	8	static
 flash.c:36:6:HAL_I2C_MemTxCpltCallback	16	static
 flash.c:60:6:Flash_flush	24	static
 flash.c:72:6:Flash_write	32	static
-flash.c:110:6:Flash_read	32	static
-flash.c:146:5:Flash_getFreeSpace	32	static
+flash.c:108:6:Flash_read	32	static
+flash.c:144:5:Flash_getFreeSpace	32	static

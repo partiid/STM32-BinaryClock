@@ -17,6 +17,7 @@ extern uint8_t hour_displayed;
 extern RTC_AlarmTypeDef sAlarm;
 extern RTC_DateTypeDef sDate;
 extern RTC_HandleTypeDef* hrtc;
+extern uint16_t FlashTx_buff[128];
 /* ===== HANDLERS FOR SPECIFIC COMMANDS ====== */
 
 
@@ -187,12 +188,20 @@ void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t 
 
 	//fill array to encode it and save to flash
 	uint8_t alarm_to_set[7];
-	int alarm_to_backup[6];
+	uint8_t alarm_to_backup[7];
+
+	RTC_DateTypeDef currentDate ;
+	HAL_RTC_GetDate(&hrtc, &currentDate, RTC_FORMAT_BIN);
+Send("Current date: %d/%d", currentDate.Month, currentDate.Date);
 
 
 	if(year >= 22 && (day > 0 && day <= max_days) && (month > 0 && month <= 12)){
+		if(currentDate.Month <= month && currentDate.Date <= day){
+			Send("Past date given");
+		}
 
-		if((hour > 0 && hour <= 23) && (minute >= 0 && minute <= 59) && (second >= 0 && second <= 59)){
+
+			if((hour > 0 && hour <= 23) && (minute >= 0 && minute <= 59) && (second >= 0 && second <= 59)){
 
 				alarm_to_set[0] = day;
 				alarm_to_set[1] = month;
@@ -222,7 +231,7 @@ void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t 
 
 			//=========get alarms from eeprom to check whether to set new alarm or not===========
 
-			int *alarms = Flash_read();
+
 
 
 			//get two already defined alarms
@@ -234,6 +243,7 @@ void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t 
 					alarm_to_backup[3] = alarmA.AlarmTime.Hours;
 					alarm_to_backup[4] = alarmA.AlarmTime.Minutes;
 					alarm_to_backup[5] = alarmA.AlarmTime.Seconds;
+					alarm_to_backup[6] = 0;
 
 
 //			Send("AlarmA: %d/%d:%d\r\n AlarmB: %d/%d:%d\r\n", alarmA.AlarmDateWeekDay, alarmA.AlarmTime.Hours, alarmA.AlarmTime.Minutes,
@@ -249,8 +259,8 @@ void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t 
 				 Flash_write(alarm_to_backup, start_idx);
 
 				 while(HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK){
-				 		Error_Handler();
-				 		sendFail(4);
+						Error_Handler();
+						sendFail(4);
 				 };
 
 				 HAL_Delay(5);
@@ -262,8 +272,11 @@ void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t 
 			}
 
 
-
-
+//			sAlarm.Alarm = RTC_ALARM_A;
+//			while(HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK){
+//							 		Error_Handler();
+//							 		sendFail(4);
+//							};
 
 
 
@@ -276,9 +289,10 @@ void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t 
 				sendFail(2);
 			}
 
-	} else {
-		sendFail(2);
-	}
+
+		} else {
+			sendFail(2);
+		}
 }
 
 
@@ -286,7 +300,11 @@ void handleResetAlarms(){
 
 	Flash_flush();
 	FLASH_init();
+	Alarms_init();
 	Send("$Success=1#\r\n");
+
+
+
 }
 
 
@@ -303,7 +321,7 @@ void handleGetAlarms(){
 		Send("$Success={AlarmA: %d/%d:%d:%d  AlarmB: %d/%d:%d:%d}#\r\n", alarmA.AlarmDateWeekDay, alarmA.AlarmTime.Hours, alarmA.AlarmTime.Minutes, alarmA.AlarmTime.Seconds,
 							alarmB.AlarmDateWeekDay, alarmB.AlarmTime.Hours, alarmB.AlarmTime.Minutes, alarmA.AlarmTime.Seconds);
 
-
+		parseAlarms(FlashTx_buff);
 
 
 }

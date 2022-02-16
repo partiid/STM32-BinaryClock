@@ -71,6 +71,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint16_t hours[16];
+uint16_t months[16];
+uint16_t days[16];
 
 	static uint16_t x1hzTime = 0;
 	static uint16_t x4hzTime = 0;
@@ -424,6 +427,9 @@ void parseCommand(){
 
 	} else if (strcmp("resetAlarms", command) == 0){
 		handleResetAlarms();
+		memset(days, 0 , sizeof(days));
+				memset(months, 0 , sizeof(months));
+				memset(hours, 0 , sizeof(hours));
 
 	} else if (strcmp("showHour", command) == 0){
 
@@ -516,7 +522,7 @@ int parseIntData(){
 }
 //function to parse alarms downloaded from flash
 
-void parseAlarms(int alarms[], int alarm_to_set[]){
+void parseAlarms(uint16_t alarms[]){
 
 //					alarm_to_set[0] = day;
 //					alarm_to_set[1] = month;
@@ -526,17 +532,32 @@ void parseAlarms(int alarms[], int alarm_to_set[]){
 //					alarm_to_set[5] = second;
 
 
-	uint8_t day = alarm_to_set[0];
-	uint8_t month = alarm_to_set[1];
+
+	//arrays with separate values to find the min value
+
+	uint8_t days_idx = 0;
 
 
+	uint8_t months_idx = 0;
 
-	uint8_t alarms_size = sizeof(alarms) / sizeof(alarms[0]);
+
+	uint8_t hours_idx = 0;
+
+	uint16_t minutes[16];
+	uint8_t minutes_idx = 0;
+
+	uint16_t seconds[16];
+	uint8_t seconds_idx = 0;
+
+
+	uint8_t alarms_size = 128;
 
 	uint8_t day_start_idx = 0;
 	uint8_t month_start_idx = 0;
 	uint8_t year_start_idx = 0;
 	uint8_t hour_start_idx = 0;
+	uint8_t minute_start_idx = 0;
+	uint8_t second_start_idx = 0;
 
 
 
@@ -549,18 +570,100 @@ void parseAlarms(int alarms[], int alarm_to_set[]){
 		if(i == 1){
 			month_start_idx = i;
 		}
+		if(i == 3){
+			hour_start_idx = i;
+		}
+		if(i == 4){
+			minute_start_idx = i;
+		}
+		if(i == 5){
+			second_start_idx = i;
+		}
 	}
 
-	//check day - if day is eq or gt check next
+	//sepearte each value to different array
 	//inc by 5 to check only days
-	for(int i = day_start_idx; i < alarms_size; i+=5){
+	for(int i = day_start_idx; i < alarms_size; i+=6){
+		if(alarms[i] != 255){
 
+		days[days_idx++] = alarms[i];
+		}
 	}
 
 	//check month
-	for(int i = month_start_idx; i < alarms_size; i+=5){
+	for(int i = month_start_idx; i < alarms_size; i+=6){
+		if(alarms[i] != 255){
+			months[months_idx++] = alarms[i];
+		}
 
 	}
+
+	for(int i = hour_start_idx; i < alarms_size; i+=6){
+			if(alarms[i] != 255){
+				hours[hours_idx++] = alarms[i];
+			}
+
+		}
+	for(int i = minute_start_idx; i < alarms_size; i+=6){
+				if(alarms[i] != 255){
+					minutes[minutes_idx++] = alarms[i];
+				}
+
+			}
+	for(int i = second_start_idx; i < alarms_size; i+=6){
+			if(alarms[i] != 255){
+			seconds[seconds_idx++] = alarms[i];
+		}
+
+		}
+	//parse alarm to get the earliest alarm to set
+
+	uint8_t location_months = 0;
+	uint8_t location_days = 0;
+
+
+
+	uint8_t checker = 0;
+
+
+
+
+
+		for(int i = 0; i < 16; i++){
+			if(months[i] > 0){
+				if(months[i] < months[location_months]){
+					location_months = i;
+				}
+			}
+			if(days[i] > 0){
+				if(days[i] < days[location_days]){
+					location_days = i;
+				}
+			}
+
+		}
+
+
+		//get the minimum month - closest alarm
+		uint8_t min_day = days[location_days];
+		uint8_t min_month = months[location_months];
+
+		if(months[location_days] == min_month){
+			location_months = location_days;
+		}
+
+
+	//in case
+
+
+	Send("Minimum month found: %d at location %d", months[location_months], location_months);
+
+	Send("Minimum day found: %d at location %d", days[location_days], location_days);
+	//check day and month if they do not overlap
+
+
+	Send("MInimum alarm: %d %d", min_day, min_month);
+
 
 
 
@@ -825,6 +928,7 @@ int main(void)
   if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != 0x32F2){
 	  MX_RTC_Init();
   }
+  Alarms_init();
 
   /* ===== RTC set time ==== */
   RTC_TimeTypeDef sTime;

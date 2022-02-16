@@ -86,9 +86,7 @@ void Flash_write(uint8_t data[], int start_idx){
 		Send("Counter at: %d\r\n", counter);
 
 		for(int i = 0; i < arr_size ; i++){
-			if(i == 0){
-				Send("%d", data[i]);
-			}
+
 			HAL_I2C_Mem_Write_IT(&hi2c1, 0xa0, counter, 1 , (uint8_t*)&data[i], sizeof(data[i]));
 			//FlashTx_buff[FlashTx_busy++] = data[i];
 
@@ -107,7 +105,7 @@ void Flash_write(uint8_t data[], int start_idx){
 }
 
 
-int *Flash_read(){
+void Flash_read(){
 	FLASH_init();
 
 	uint8_t byte = 0x00;
@@ -138,7 +136,7 @@ int *Flash_read(){
 
 }
 
-	return FlashTx_buff;
+
 
 }
 

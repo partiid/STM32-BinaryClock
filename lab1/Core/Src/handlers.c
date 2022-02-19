@@ -18,6 +18,9 @@ extern RTC_AlarmTypeDef sAlarm;
 extern RTC_DateTypeDef sDate;
 extern RTC_HandleTypeDef* hrtc;
 extern uint16_t FlashTx_buff[128];
+
+extern RTC_DateTypeDef getDate();
+
 /* ===== HANDLERS FOR SPECIFIC COMMANDS ====== */
 
 
@@ -157,11 +160,7 @@ RTC_AlarmTypeDef getAlarm(uint8_t whichAlarm){
 
 
 }
-RTC_DateTypeDef getDate(){
-	RTC_DateTypeDef date;
-	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
-	return date;
-}
+
 
 uint8_t getDay(){
 	return  getDate().Date;
@@ -192,12 +191,12 @@ void handleSetAlarm(RTC_DateTypeDef sDate, uint8_t day, uint8_t month, uint16_t 
 
 	RTC_DateTypeDef currentDate ;
 	HAL_RTC_GetDate(&hrtc, &currentDate, RTC_FORMAT_BIN);
-Send("Current date: %d/%d", currentDate.Month, currentDate.Date);
+	Send("Current date: %d/%d", currentDate.Month, currentDate.Date);
 
 
 	if(year >= 22 && (day > 0 && day <= max_days) && (month > 0 && month <= 12)){
 		if(currentDate.Month <= month && currentDate.Date <= day){
-			Send("Past date given");
+
 		}
 
 
@@ -211,7 +210,7 @@ Send("Current date: %d/%d", currentDate.Month, currentDate.Date);
 				alarm_to_set[5] = second;
 				alarm_to_set[6] = 0;
 
-			Send("$Success=1 %d#\r\n");
+
 
 
 
@@ -254,21 +253,21 @@ Send("Current date: %d/%d", currentDate.Month, currentDate.Date);
 			uint8_t earlierAlarm = compareAlarms(alarmA, sAlarm);
 
 			//if alarm is earlier set that alarm set that alarm
-			if(earlierAlarm == 2){
+			if(earlierAlarm == 2 ){
 				 sAlarm.Alarm = RTC_ALARM_A;
 				 Flash_write(alarm_to_backup, start_idx);
+				 Send("$Success=1#\r\n");
 
 				 while(HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK){
 						Error_Handler();
 						sendFail(4);
 				 };
 
-				 HAL_Delay(5);
 
-			} else {
 
+			}  else {
+				Send("$Success=1#\r\n");
 				Flash_write(alarm_to_set, start_idx);
-
 			}
 
 
@@ -277,7 +276,6 @@ Send("Current date: %d/%d", currentDate.Month, currentDate.Date);
 //							 		Error_Handler();
 //							 		sendFail(4);
 //							};
-
 
 
 
@@ -313,6 +311,7 @@ void handleGetAlarms(){
 
 	Flash_read();
 
+	parseAlarms(FlashTx_buff);
 
 	RTC_AlarmTypeDef alarmA = getAlarm((uint8_t)1);
 	RTC_AlarmTypeDef alarmB = getAlarm((uint8_t)2);
@@ -321,7 +320,7 @@ void handleGetAlarms(){
 		Send("$Success={AlarmA: %d/%d:%d:%d  AlarmB: %d/%d:%d:%d}#\r\n", alarmA.AlarmDateWeekDay, alarmA.AlarmTime.Hours, alarmA.AlarmTime.Minutes, alarmA.AlarmTime.Seconds,
 							alarmB.AlarmDateWeekDay, alarmB.AlarmTime.Hours, alarmB.AlarmTime.Minutes, alarmA.AlarmTime.Seconds);
 
-		parseAlarms(FlashTx_buff);
+	//parseAlarms(FlashTx_buff);
 
 
 }

@@ -138,6 +138,7 @@ void displayHour(uint8_t hour, uint8_t minute, uint8_t second){
 	resetPins();
 
 	int bits_count = convertToBinary(hour);
+
 	if(bits_count > 5 ){
 		Send("Fail: {Data Not acceptable}\r\n");
 	} else {

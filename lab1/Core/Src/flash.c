@@ -21,6 +21,7 @@ uint8_t FlashTx_busy = 0; //head //write
 
 
 /* ===== FLASH INIT ===== */
+uint16_t search_word[12];
 
 
 void FLASH_init(){
@@ -29,6 +30,10 @@ void FLASH_init(){
 	FlashTx_empty = 0;
 	FlashTx_busy = 0;
 	memset(FlashTx_buff, 255, FLASHTX_BUFF_SIZE);
+}
+
+void FLASH_reinit(){
+
 }
 
 
@@ -94,14 +99,6 @@ void Flash_write(uint8_t data[], int start_idx){
 			HAL_Delay(5);
 		}
 
-
-
-
-
-
-
-
-
 }
 
 
@@ -139,6 +136,39 @@ void Flash_read(){
 
 
 }
+
+
+void Flash_delete(uint8_t day, uint8_t month, uint8_t hour, uint8_t minute, uint8_t second){
+
+
+	uint8_t byte = 0x00;
+	uint8_t data_found = 0;
+
+
+
+	for(int i = 0; i <= 128; i++){
+
+
+		if(FlashTx_buff[i] == second && FlashTx_buff[i - 1] == minute && FlashTx_buff[i - 2] == hour && FlashTx_buff[i - 3] == 22 && FlashTx_buff[i - 4] == month && FlashTx_buff[i - 5 ] == day){
+
+			FlashTx_buff[i] = 255;
+			FlashTx_buff[i - 1] = 255;
+			FlashTx_buff[i - 2] = 255;
+			FlashTx_buff[i - 3] = 255;
+			FlashTx_buff[i - 4] = 255;
+			FlashTx_buff[i - 5] = 255;
+
+
+		}
+
+
+	}
+
+
+
+
+}
+
 
 // function to get first free address to write to
 int Flash_getFreeSpace(){

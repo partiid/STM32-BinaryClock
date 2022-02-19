@@ -71,9 +71,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint16_t hours[16];
-uint16_t months[16];
-uint16_t days[16];
+
 
 	static uint16_t x1hzTime = 0;
 	static uint16_t x4hzTime = 0;
@@ -133,6 +131,13 @@ uint16_t days[16];
 	uint8_t volatile day_to_set = 0; //set day to set the alarm
 	uint8_t volatile month_to_set = 0;
 	uint16_t volatile year_to_set  = 0;
+
+	//poszczegolne zmienne alarmow
+	uint16_t volatile hours[16];
+	uint16_t volatile months[16];
+	uint16_t volatile days[16];
+	uint16_t volatile minutes[16];
+	uint16_t volatile seconds[16];
 
 	//set hours to set the alarm
 
@@ -427,9 +432,8 @@ void parseCommand(){
 
 	} else if (strcmp("resetAlarms", command) == 0){
 		handleResetAlarms();
-		memset(days, 0 , sizeof(days));
-				memset(months, 0 , sizeof(months));
-				memset(hours, 0 , sizeof(hours));
+		clearAlarms();
+
 
 	} else if (strcmp("showHour", command) == 0){
 
@@ -522,7 +526,7 @@ int parseIntData(){
 }
 //function to parse alarms downloaded from flash
 
-void parseAlarms(uint16_t alarms[]){
+uint8_t parseAlarms(uint16_t alarms[]){
 
 //					alarm_to_set[0] = day;
 //					alarm_to_set[1] = month;
@@ -531,9 +535,11 @@ void parseAlarms(uint16_t alarms[]){
 //					alarm_to_set[4] = minute;
 //					alarm_to_set[5] = second;
 
+	clearAlarms();
 
 
 	//arrays with separate values to find the min value
+
 
 	uint8_t days_idx = 0;
 
@@ -543,10 +549,10 @@ void parseAlarms(uint16_t alarms[]){
 
 	uint8_t hours_idx = 0;
 
-	uint16_t minutes[16];
+
 	uint8_t minutes_idx = 0;
 
-	uint16_t seconds[16];
+
 	uint8_t seconds_idx = 0;
 
 
@@ -620,13 +626,12 @@ void parseAlarms(uint16_t alarms[]){
 
 	uint8_t location_months = 0;
 	uint8_t location_days = 0;
-
+	uint8_t location_hours = 0;
+	uint8_t location_minutes = 0;
+	uint8_t location_seconds = 0;
 
 
 	uint8_t checker = 0;
-
-
-
 
 
 		for(int i = 0; i < 16; i++){
@@ -640,6 +645,22 @@ void parseAlarms(uint16_t alarms[]){
 					location_days = i;
 				}
 			}
+			if(hours[i] > 0){
+				if(hours[i] < hours[location_hours]){
+					location_hours = i;
+				}
+			}
+			if(minutes[i] > 0){
+				if(minutes[i] < minutes[location_minutes]){
+					location_minutes = i;
+				}
+
+			}
+			if(seconds[i] > 0){
+				if(seconds[i] < seconds[location_seconds]){
+					location_seconds = i;
+				}
+			}
 
 		}
 
@@ -647,10 +668,26 @@ void parseAlarms(uint16_t alarms[]){
 		//get the minimum month - closest alarm
 		uint8_t min_day = days[location_days];
 		uint8_t min_month = months[location_months];
+		uint8_t min_hour = hours[location_hours];
+		uint8_t min_minute = minutes[location_minutes];
+		uint8_t min_second = seconds[location_seconds];
 
+		//check for same values to distinc the minimum value
 		if(months[location_days] == min_month){
 			location_months = location_days;
 		}
+
+		if(hours[location_minutes] == min_hour){
+			location_hours = location_minutes;
+		}
+
+		if(minutes[location_seconds] == min_second){
+			location_minutes = min_second;
+		}
+
+		Send("Location minuets: %d  ", location_minutes);
+
+		return location_minutes;
 
 
 	//in case
@@ -684,6 +721,14 @@ void clearCommand(){
 void clearData(){
 	data_busy = 0;
 	memset(data, 0, data_size);
+}
+
+void clearAlarms(){
+		memset(days, 0, sizeof(days));
+		memset(minutes, 0, sizeof(minutes));
+		memset(months, 0, sizeof(months));
+		memset(seconds, 0, sizeof(seconds));
+		memset(hours, 0, sizeof(hours));
 }
 
 
@@ -738,6 +783,7 @@ void decodeFrame() {
 
 		//rewrite command to the command table
 		for(int i = 1; i <= command_end_idx; i++){
+
 			//prevent memory leaks
 			if(command_busy >= command_size){
 				command_busy = 0;
@@ -809,7 +855,7 @@ void downloadFrame(){
 			}
 
 		//check if frame is not too long
-		if(frameLength > FRAME_SIZE){
+		if(frameLength >= FRAME_SIZE){
 			memset(frame, 0x00, FRAME_SIZE);
 			Frame_busy = 0;
 			frameLength = 0;
@@ -940,6 +986,7 @@ int main(void)
 
   //set time
   HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
+
   HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2500 - 1, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
 
 

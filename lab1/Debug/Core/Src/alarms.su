@@ -1,2 +1,5 @@
-alarms.c:14:6:HAL_RTC_AlarmAEventCallback	24	static
-alarms.c:30:6:Alarms_init	8	static
+alarms.c:29:17:getDate	8	static
+alarms.c:36:6:reinitAlarms	4	static
+alarms.c:52:6:HAL_RTC_AlarmAEventCallback	40	static
+alarms.c:101:6:HAL_RTC_AlarmBEventCallback	16	static
+alarms.c:108:6:Alarms_init	16	static
